@@ -1,7 +1,7 @@
 [project]
-name = "subnet"
+name = "pysubnet"
 version = "0.1.0"
-description = "Add your description here"
+description = "Deploy a substrate permissioned network using python"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = []
