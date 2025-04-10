@@ -1,3 +1,4 @@
+from pprint import pprint
 from eth_keys import keys
 from eth_utils import to_checksum_address
 import secrets
@@ -29,3 +30,7 @@ def generate_ethereum_keypair():
         "public_key": public_key.to_hex(),
         "ethereum_address": address,
     }
+
+if __name__ == "__main__":
+    print("Ethereum keypair generated:")
+    pprint(generate_ethereum_keypair())
