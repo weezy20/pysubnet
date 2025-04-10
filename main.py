@@ -23,7 +23,12 @@ def run_command(command, cwd=None):
 
 def parse_subkey_output(output):
     return {
-        "secret_phrase": output.split("Secret phrase:")[1].split()[0].strip(),
+        "secret_phrase": " ".join(
+            output.split("Secret phrase:")[1].split()[:12]
+        ).strip()
+        if "Secret phrase:" in output
+        else None,
+        "secret": output.split("Secret seed:")[1].split()[0].strip(),
         "public_key": output.split("Public key (hex):")[1].split()[0].strip(),
         "ss58_address": output.split("Public key (SS58):")[1].split()[0].strip(),
         "account_id": output.split("Account ID:")[1].split()[0].strip(),
@@ -37,7 +42,7 @@ def parse_moonkey_output(output):
     }
 
 
-def main():
+def main(chainspec="dev"):
     # Create root-dir, if exists, prompt to clean, otherwise exit program
     os.makedirs(ROOT_DIR, exist_ok=True)
     if os.listdir(ROOT_DIR):
@@ -48,8 +53,6 @@ def main():
     for node in NODES:
         os.makedirs(f"{ROOT_DIR}/{node['name']}", exist_ok=False)  # Prevent overwrites
         node["base_path"] = f"{ROOT_DIR}/{node['name']}"
-
-    node_data = []
 
     # Generate keys and setup nodes
     for node in NODES:
@@ -63,13 +66,19 @@ def main():
                 "--file",
                 f"{node['name']}-node-private-key",
             ],
-            cwd=f"{node["base_path"]}",
+            cwd=f"{node['base_path']}",
         )
-        node["node-public-key"] = result.stderr.strip()
-        print("\t", node["node-public-key"], "\n")
-    #     # Generate Aura keys (Sr25519)
-    #     aura_result = run_command(["subkey", "generate", "--scheme", "Sr25519"])
-    #     aura = parse_subkey_output(aura_result.stdout)
+        node["libp2p-public-key"] = result.stderr.strip()
+        print("\t", node["libp2p-public-key"], "\n")
+        # Generate Aura keys (Sr25519)
+        aura_result = run_command(["subkey", "generate", "--scheme", "Sr25519"])
+        aura = parse_subkey_output(aura_result.stdout)
+        print("aura key:", aura["secret_phrase"])
+        print("\t", aura["public_key"], "\n")
+        node["aura-public-key"] = aura["public_key"]
+        node["aura-private-key"] = aura["secret"]
+        node["aura-secret-phrase"] = aura["secret_phrase"]
+        print(node)
 
     #     # Generate Grandpa keys (Ed25519)
     #     grandpa_result = run_command(["subkey", "generate", "--scheme", "Ed25519"])
@@ -172,4 +181,11 @@ if __name__ == "__main__":
         if os.path.exists(ROOT_DIR):
             print(f"Cleaning up {ROOT_DIR}...")
             shutil.rmtree(ROOT_DIR)
-    main()
+    chainspec = None
+    if "--chainspec" in sys.argv:
+        try:
+            chainspec_index = sys.argv.index("--chainspec")
+            chainspec = sys.argv[chainspec_index + 1]
+        except IndexError:
+            raise Exception("Missing path after --chainspec argument")
+    main(chainspec)
