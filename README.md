@@ -31,3 +31,9 @@ You can also use interactive mode by passing in `i` or `interactive` as an extra
 ```sh
 python main.py i
 ```
+
+## Run a private network:
+
+```sh
+python main.py run
+```
