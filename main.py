@@ -101,15 +101,15 @@ def generate_keys(account_type=AccountKeyType.AccountId20):
             case AccountKeyType.AccountId20:
                 validator_result = run_command(["moonkey"])
                 validator = parse_moonkey_output(validator_result.stdout)
-                node["validator-private-key"] = validator["private_key"]
-                node["validator-public-key"] = validator["public_key"]
+                node["validator-accountid20-private-key"] = validator["private_key"]
+                node["validator-accountid20-public-key"] = validator["public_key"]
             case AccountKeyType.AccountId32:
                 validator_result = run_command(
                     [SUBSTRATE, "key", "generate", "--scheme", "Sr25519"]
                 )
                 validator = parse_subkey_output(validator_result.stdout)
-                node["validator-private-key"] = validator["secret"]
-                node["validator-public-key"] = validator["public_key"]
+                node["validator-accountid32-private-key"] = validator["secret"]
+                node["validator-accountid32-public-key"] = validator["public_key"]
         # pprint(node)
     # Write node configuration to a JSON file
     print("Saving network contents to -> ", f"{ROOT_DIR}/pysubnet.json")
