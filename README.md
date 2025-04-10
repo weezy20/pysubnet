@@ -5,6 +5,10 @@ Automates the process of generating keys, inserting them into keystore for subst
 Currently works only for `AURA`+`Grandpa` chains however it's not too difficult to modify the contents of this script to suit your own `key-type`
 
 ## Usage
+
+### Pre-requisites
+Make sure you've got your `chainspec.json`, and the substrate binary, called `substrate` in the script (change as per your need).
+
 ```shell
 python main.py
 ```
