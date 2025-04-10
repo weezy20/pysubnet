@@ -6,13 +6,16 @@ import sys
 import shutil
 from pprint import pprint
 
-SUBSTRATE = os.path.abspath("substrate") # your substrate node binary
-ROOT_DIR = os.path.abspath("./substrate-testnet") # Default root_dir 
+SUBSTRATE = os.path.abspath("substrate")  # your substrate node binary
+ROOT_DIR = os.path.abspath("./substrate-testnet")  # Default root_dir
 NODES = [
     {"name": "alice", "p2p_port": 30333, "rpc_port": 9944},
     {"name": "bob", "p2p_port": 30334, "rpc_port": 9945},
     {"name": "charlie", "p2p_port": 30335, "rpc_port": 9946},
 ]
+"""
+Runs a command in a given directory
+"""
 
 
 def run_command(command, cwd=None):
@@ -20,6 +23,11 @@ def run_command(command, cwd=None):
     if result.returncode != 0:
         raise Exception(f"Command failed: {' '.join(command)}\n{result.stderr}")
     return result
+
+
+"""
+Parses subkey output
+"""
 
 
 def parse_subkey_output(output):
@@ -34,6 +42,11 @@ def parse_subkey_output(output):
         "ss58_address": output.split("Public key (SS58):")[1].split()[0].strip(),
         "account_id": output.split("Account ID:")[1].split()[0].strip(),
     }
+
+
+"""
+Parses moonkey output, a subkey like tool but for Ethereum accounts
+"""
 
 
 def parse_moonkey_output(output):
