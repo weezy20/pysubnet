@@ -6,8 +6,8 @@ import sys
 import shutil
 from pprint import pprint
 
-SUBSTRATE = os.path.abspath("substrate")
-ROOT_DIR = os.path.abspath("./substrate-testnet")
+SUBSTRATE = os.path.abspath("substrate") # your substrate node binary
+ROOT_DIR = os.path.abspath("./substrate-testnet") # Default root_dir 
 NODES = [
     {"name": "alice", "p2p_port": 30333, "rpc_port": 9944},
     {"name": "bob", "p2p_port": 30334, "rpc_port": 9945},
