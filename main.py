@@ -4,6 +4,7 @@ import subprocess
 import time
 import sys
 import shutil
+from pprint import pprint
 
 SUBSTRATE = "substrate"
 ROOT_DIR = "./substrate-testnet"
@@ -57,7 +58,6 @@ def main(chainspec="dev"):
     # Generate keys and setup nodes
     for node in NODES:
         print(f"Setting up {node['name']}...")
-        print(f"Generating node-key for {node['name']}...")
         # Generate node key and peer ID
         result = run_command(
             [
@@ -69,21 +69,32 @@ def main(chainspec="dev"):
             cwd=f"{node['base_path']}",
         )
         node["libp2p-public-key"] = result.stderr.strip()
-        print("\t", node["libp2p-public-key"], "\n")
+        print("\tLibp2p node key: ", node["libp2p-public-key"], "\n")
+        
         # Generate Aura keys (Sr25519)
         aura_result = run_command(["subkey", "generate", "--scheme", "Sr25519"])
         aura = parse_subkey_output(aura_result.stdout)
-        print("aura key:", aura["secret_phrase"])
-        print("\t", aura["public_key"], "\n")
+        print("\tAura public key:", aura["public_key"], "\n")
         node["aura-public-key"] = aura["public_key"]
         node["aura-private-key"] = aura["secret"]
         node["aura-secret-phrase"] = aura["secret_phrase"]
-        print(node)
 
-    #     # Generate Grandpa keys (Ed25519)
-    #     grandpa_result = run_command(["subkey", "generate", "--scheme", "Ed25519"])
-    #     grandpa = parse_subkey_output(grandpa_result.stdout)
-
+        # Generate Grandpa keys (Ed25519)
+        grandpa_result = run_command(["subkey", "generate", "--scheme", "Ed25519"])
+        grandpa = parse_subkey_output(grandpa_result.stdout)
+        print("\tGrandpa public key:", grandpa["public_key"], "\n")
+        node["grandpa-public-key"] = grandpa["public_key"]
+        node["grandpa-private-key"] = grandpa["secret"]
+        node["grandpa-secret-phrase"] = grandpa["secret_phrase"]
+        pprint(node)
+    # Prompt user to proceed with key insertion
+    while (True):
+        proceed = input("Keys generated. Proceed to insert? (yes/no): ").strip().lower()
+        if proceed in ["n", "no", "nay"]:
+            print("Aborting key insertion.")
+            return
+        elif proceed in ["y", "yes", "yay"]:
+            break
     #     # Insert keys into keystore
     #     run_command([
     #         "SUBSTRATE", "key", "insert",
