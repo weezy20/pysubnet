@@ -33,16 +33,21 @@ def edit_vs_ss_authorities(chainspec, NODES):
         data = json.load(f)
     genesis = data["genesis"]["runtimeGenesis"]["patch"]
     session = genesis["session"]
+    validatorSet = genesis["validatorSet"]
     # Remove existing keys
     session["keys"] = []
+    validatorSet["initialValidators"] = []
     # Insert keys into pallet-sessions
     for node in NODES:
-        entry = [
+        entry_sessions = [
             node["validator-accountid20-public-key"],
             node["validator-accountid20-public-key"],
             {"aura": node["aura-public-key"], "grandpa": node["grandpa-public-key"]},
         ]
-        session["keys"].append(entry)
+        session["keys"].append(entry_sessions)
+        entry_validatorSet = node["validator-accountid20-public-key"]
+        validatorSet["initialValidators"].append(entry_validatorSet)
+
     # Write the modified data back to the original file
     with open(chainspec, "w") as f:
         json.dump(data, f, indent=2)
