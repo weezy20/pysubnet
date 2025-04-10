@@ -17,22 +17,20 @@ NODES = [
     {"name": "bob", "p2p_port": 30334, "rpc_port": 9945},
     {"name": "charlie", "p2p_port": 30335, "rpc_port": 9946},
 ]
-"""
-Runs a command in a given directory
-"""
 
 
 def run_command(command, cwd=None):
+    """
+    Runs a command in a given directory
+    """
     result = subprocess.run(command, capture_output=True, text=True, cwd=cwd)
     if result.returncode != 0:
         raise Exception(f"Command failed: {' '.join(command)}\n{result.stderr}")
     return result
 
 
-"""Parses subkey output"""
-
-
 def parse_subkey_output(output):
+    """Parses subkey output"""
     return {
         "secret_phrase": " ".join(
             output.split("Secret phrase:")[1].split()[:12]
@@ -46,28 +44,25 @@ def parse_subkey_output(output):
     }
 
 
-"""
-Parses moonkey output, a subkey like tool but for Ethereum accounts
-"""
-
-
 def parse_moonkey_output(output):
+    """
+    Parses moonkey output, a subkey like tool but for Ethereum accounts
+    """
     return {
         "private_key": output.split("Private Key:")[1].split()[0].strip(),
         "public_key": output.split("Address:")[1].split()[0].strip(),
     }
 
 
-"""Generate keys
-Generates keys for the nodes:
-- Generates libp2p node-key
-- Generates AURA sr25519 key
-- Generates Grandpa ed25519 key
-- Generates validator account keys based on `account_type`
-"""
-
-
 def generate_keys(account_type=AccountKeyType.AccountId20):
+    """Generate keys
+    Generates keys for the nodes:
+    - Generates libp2p node-key
+    - Generates AURA sr25519 key
+    - Generates Grandpa ed25519 key
+    - Generates validator account keys based on `account_type`
+    """
+
     for node in NODES:
         print(f"Setting up {node['name']}...")
         # Generate node key and peer ID
@@ -108,7 +103,6 @@ def generate_keys(account_type=AccountKeyType.AccountId20):
         node["grandpa-secret-phrase"] = grandpa["secret_phrase"]
         node["grandpa-ss58"] = grandpa["ss58_address"]
 
-
         # Generate account keys
         match account_type:
             case AccountKeyType.AccountId20:
@@ -130,10 +124,9 @@ def generate_keys(account_type=AccountKeyType.AccountId20):
         json.dump(NODES, f, indent=4)
 
 
-"""Insert keys into keystore"""
-
-
 def insert_keystore(chainspec):
+    """Insert keys into keystore"""
+
     # Insert keys into keystore
     for node in NODES:
         # Insert AURA keys
@@ -206,14 +199,12 @@ def setup_dirs():
         node["base_path"] = f"{ROOT_DIR}/{node['name']}"
 
 
-"""Generate a new chainspec and insert bootnodes into it
-If chainspec file is provided as arg, that's used as template instead of generating a new one.
-This function is required to be called before other chainspec editing functions 
-to ensure that they work properly with ROOTDIR/chainspec.json
-"""
-
-
 def init_chainspec(chainspec):
+    """Generate a new chainspec and insert bootnodes into it
+    If chainspec file is provided as arg, that's used as template instead of generating a new one.
+    This function is required to be called before other chainspec editing functions
+    to ensure that they work properly with ROOTDIR/chainspec.json
+    """
     c = None
     # Generate initial chainspec
     if chainspec in ["dev", "local"]:  # No explicit file passed
