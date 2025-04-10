@@ -11,7 +11,7 @@ from chainspec_handlers import edit_vs_ss_authorities
 INTERACTIVE = False
 RUN_NETWORK = False
 SUBSTRATE = os.path.abspath("substrate")  # your substrate node binary
-ROOT_DIR = os.path.abspath("./substrate-network")  # Default root_dir
+ROOT_DIR = os.path.abspath("./network")  # Default root_dir
 NODES = [
     {"name": "alice", "p2p_port": 30333, "rpc_port": 9944},
     {"name": "bob", "p2p_port": 30334, "rpc_port": 9945},
@@ -277,38 +277,68 @@ def start_network(chainspec):
     # Generate raw chainspec
     raw_chainspec = generate_raw_chainspec(chainspec)
 
-    # # Start nodes
-    # processes = []
-    # for i, node in enumerate(NODES):
-    #     cmd = [
-    #         "SUBSTRATE",
-    #         "--base-path", node["name"],
-    #         "--chain", "chainspec_raw.json",
-    #         "--port", str(node["p2p_port"]),
-    #         "--rpc-port", str(node["rpc_port"]),
-    #         "--ws-port", str(node["ws_port"]),
-    #         "--validator",
-    #         "--name", node["name"],
-    #         "--node-key-file", f"{node['name']}/node-key",
-    #         "--telemetry-url", "ws://telemetry.polkadot.io:1024 0",
-    #         "--rpc-cors", "all",
-    #         "--unsafe-rpc-external",
-    #         "--unsafe-ws-external",
-    #     ]
-    #     log_file = open(f"{node['name']}.log", "w")
-    #     processes.append(subprocess.Popen(cmd, stdout=log_file, stderr=subprocess.STDOUT))
-    #     print(f"Started {node['name']} (PID: {processes[-1].pid})")
+    # Start nodes
+    node_procs = []
+    for i, node in enumerate(NODES):
+        # Should be executed inside ROOT_DIR
+        cmd = [
+            SUBSTRATE,
+            "--base-path",
+            node["name"],
+            "--chain",
+            raw_chainspec,
+            "--port",
+            str(node["p2p_port"]),
+            "--rpc-port",
+            str(node["rpc_port"]),
+            "--validator",
+            "--name",
+            node["name"],
+            "--node-key-file",
+            f"{node['name']}/{node['name']}-node-private-key",
+            "--rpc-cors",
+            "all",
+            # "--rpc-external", # is an error to run with --validator
+        ]
+        log_file = open(f"{ROOT_DIR}/{node['name']}/{node['name']}.log", "w")
+        err_log_file = open(f"{ROOT_DIR}/{node['name']}/{node['name']}.error.log", "w")
+        # This is not a mistake. Substrate nodes write normal logs to stderr. Weird.
+        p = subprocess.Popen(cmd, stdout=err_log_file, stderr=log_file, cwd=ROOT_DIR)
+        node_procs.append(
+            {
+                "process": p,
+                "log_file": log_file,
+                "err_log_file": err_log_file,
+                "name": node["name"],
+            }
+        )
+        print(f"Started {node['name']} (PID: {p.pid})")
 
-    # print("\nNetwork is running! Press Ctrl+C to stop")
-    # try:
-    #     while True:
-    #         time.sleep(1)
-    # except KeyboardInterrupt:
-    #     print("\nStopping nodes...")
-    #     for p in processes:
-    #         p.terminate()
-    #     for p in processes:
-    #         p.wait()
+    print("\nNetwork is running! Press Ctrl+C to stop")
+    try:
+        while True:
+            time.sleep(2) # 2 second sleep to reduce CPU usage.
+    except KeyboardInterrupt:
+        print("\nStopping nodes...")
+        # Step 1: Send SIGTERM to all processes
+        for node_proc in node_procs:
+            node_proc["process"].terminate()
+        # Step 2: Wait for processes to terminate, with a timeout
+        for node_proc in node_procs:
+            p = node_proc["process"]
+            try:
+                p.wait(timeout=10)  # Wait up to 10 seconds
+            except subprocess.TimeoutExpired:
+                print(
+                    f"Process {p.pid} ({node_proc['name']}) did not terminate in time, killing it."
+                )
+                p.kill()  # Forcefully terminate with SIGKILL
+                p.wait()  # Ensure it’s fully terminated
+        # Step 3: Close all log files
+        for node_proc in node_procs:
+            node_proc["log_file"].close()
+            node_proc["err_log_file"].close()
+        print("All nodes stopped and log files closed.")
 
 
 def main(chainspec_path_or_str="dev"):
