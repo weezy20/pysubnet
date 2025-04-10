@@ -1,7 +1,8 @@
 # PySubnet
 
 ## Description
-Automates the process of generating keys, inserting them into keystore for substrate based chains
+Automates the process of generating keys, inserting them into keystore for substrate based chains;
+Also generates libp2p node keys and edits the chainspec file accordingly to include them.
 Currently works only for `AURA`+`Grandpa` chains however it's not too difficult to modify the contents of this script to suit your own `key-type`
 
 ## Usage

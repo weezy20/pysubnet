@@ -79,6 +79,10 @@ def generate_keys(account_type=AccountKeyType.AccountId20):
             cwd=f"{node['base_path']}",
         )
         node["libp2p-public-key"] = result.stderr.strip()
+        with open(
+            f"{ROOT_DIR}/{node['name']}/{node['name']}-node-private-key", "r"
+        ) as key_file:
+            node["libp2p-private-key"] = key_file.read().strip()
         print("\tLibp2p node key: ", node["libp2p-public-key"], "\n")
 
         # Generate Aura keys (Sr25519)
@@ -179,6 +183,43 @@ def setup_dirs():
         node["base_path"] = f"{ROOT_DIR}/{node['name']}"
 
 
+"""Generate a new chainspec with bootnodes populated into it
+Final output is at ROOTDIR/chainspec.json"""
+
+
+def insert_bootnodes(chainspec):
+    c = None
+    # Generate initial chainspec
+    if chainspec in ["dev", "local"]: # No explicit file passed
+        print("Generating new local chainspec...")
+        c = json.loads(
+            run_command(
+                [
+                    SUBSTRATE,
+                    "build-spec",
+                    "--chain",
+                    "local",
+                    "--disable-default-bootnode",
+                ],
+                cwd=ROOT_DIR,
+            ).stdout
+        )
+    elif isinstance(chainspec, str) and os.path.isfile(chainspec):
+        try:
+            with open(chainspec, 'r') as f:
+                c = json.load(f)
+        except json.JSONDecodeError:
+            raise ValueError(f"File exists but is not valid JSON: {chainspec}")
+    # Set bootnodes
+    c["bootNodes"] = [
+        f"/ip4/127.0.0.1/tcp/{n['p2p_port']}/p2p/{n['libp2p-public-key']}"
+        for n in NODES
+    ]
+
+    with open(f"{ROOT_DIR}/chainspec.json", "w") as f:
+        json.dump(c, f, indent=2)
+    print("Chainspec written to", f"{ROOT_DIR}/chainspec.json")
+
 def main(chainspec="dev"):
     print("Using chainspec -> ", chainspec)
     # Setup directory tree for NODEs
@@ -194,31 +235,7 @@ def main(chainspec="dev"):
         elif proceed in ["y", "yes", "yay"]:
             insert_keystore(chainspec)
             break
-
-    # # Generate initial chainspec
-    # print("Generating chainspec...")
-    # run_command([
-    #     "SUBSTRATE", "build-spec",
-    #     "--chain", "local",
-    #     "--disable-default-bootnode"
-    # ], stdout=open("chainspec.json", "w"))
-
-    # # Modify chainspec
-    # with open("chainspec.json", "r") as f:
-    #     chainspec = json.load(f)
-
-    # # Set authorities
-    # chainspec["genesis"]["runtime"]["aura"]["authorities"] = [n["aura_pub"] for n in node_data]
-    # chainspec["genesis"]["runtime"]["grandpa"]["authorities"] = [[n["grandpa_pub"], 1] for n in node_data]
-    # chainspec["genesis"]["runtime"]["sudo"]["key"] = node_data[0]["ss58_address"]
-
-    # # Set bootnodes
-    # chainspec["bootNodes"] = [
-    #     f"/ip4/127.0.0.1/tcp/{n['p2p_port']}/p2p/{n['peer_id']}" for n in node_data
-    # ]
-
-    # with open("chainspec.json", "w") as f:
-    #     json.dump(chainspec, f, indent=2)
+    insert_bootnodes(chainspec)  # Ignore main(chainspec) for the moment...
 
     # # Generate raw chainspec
     # run_command([
