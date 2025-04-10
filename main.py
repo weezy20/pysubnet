@@ -205,7 +205,7 @@ def init_chainspec(chainspec):
                     SUBSTRATE,
                     "build-spec",
                     "--chain",
-                    "local",
+                    chainspec,
                     "--disable-default-bootnode",
                 ],
                 cwd=ROOT_DIR,
@@ -341,16 +341,14 @@ def main(chainspec_path_or_str="dev"):
     generate_keys(account_type=AccountKeyType.AccountId20)
     if INTERACTIVE:
         # Prompt user to proceed with key insertion
-        while True:
-            proceed = (
-                input("Keys generated. Proceed to insert? (yes/no): ").strip().lower()
-            )
-            if proceed in ["n", "no", "nay"]:
-                print("Aborting key insertion.")
-                return
-            elif proceed in ["y", "yes", "yay"]:
-                insert_keystore(chainspec_path_or_str)
-                break
+        proceed = input("Keys generated. Proceed to insert? (yes/no): ").strip().lower()
+        if proceed in ["n", "no", "nay"]:
+            print("Aborting key insertion.")
+            return
+        elif proceed in ["y", "yes", "yay"]:
+            insert_keystore(chainspec_path_or_str)
+    else:
+        insert_keystore(chainspec_path_or_str)
     # Modified chainspec with bootnodes inserted
     chainspec = init_chainspec(
         chainspec_path_or_str
@@ -395,7 +393,17 @@ if __name__ == "__main__":
         try:
             chainspec_index = sys.argv.index("--chainspec")
             chainspec = sys.argv[chainspec_index + 1]
-            main(chainspec_path_or_str=os.path.abspath(chainspec))
+            if os.path.isfile(chainspec):
+                try:
+                    with open(chainspec, "r") as f:
+                        json.load(f)
+                        main(chainspec_path_or_str=os.path.abspath(chainspec))
+                except json.JSONDecodeError:
+                    raise Exception(f"Chainspec file is not valid JSON: {chainspec}")
+            elif chainspec not in ["dev", "local"]:
+                raise Exception(f"Invalid chainspec argument: {chainspec}")
+            else:
+                main(chainspec_path_or_str=chainspec)
         except IndexError:
             raise Exception("Missing path after --chainspec argument")
     else:
