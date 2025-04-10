@@ -87,7 +87,10 @@ def main(chainspec="dev"):
         node["grandpa-public-key"] = grandpa["public_key"]
         node["grandpa-private-key"] = grandpa["secret"]
         node["grandpa-secret-phrase"] = grandpa["secret_phrase"]
-        pprint(node)
+        # pprint(node)
+    # Write node configuration to a JSON file
+    with open(f"{ROOT_DIR}/pysubnet.json", "w") as f:
+        json.dump(NODES, f, indent=4)
     # Prompt user to proceed with key insertion
     while True:
         proceed = input("Keys generated. Proceed to insert? (yes/no): ").strip().lower()
@@ -110,7 +113,7 @@ def main(chainspec="dev"):
                 chainspec,
                 "--scheme",
                 "Sr25519",
-                "--type",
+                "--key-type",
                 "aura",
                 "--suri",
                 node["aura-private-key"],
@@ -129,7 +132,7 @@ def main(chainspec="dev"):
                 chainspec,
                 "--scheme",
                 "Ed25519",
-                "--type",
+                "--key-type",
                 "gran",
                 "--suri",
                 node["grandpa-private-key"],
