@@ -9,6 +9,7 @@ from accounts import AccountKeyType
 from chainspec_handlers import edit_vs_ss_authorities
 
 INTERACTIVE = False
+RUN_NETWORK = False
 SUBSTRATE = os.path.abspath("substrate")  # your substrate node binary
 ROOT_DIR = os.path.abspath("./substrate-network")  # Default root_dir
 NODES = [
@@ -244,32 +245,8 @@ def init_chainspec(chainspec):
     return f"{ROOT_DIR}/chainspec.json"
 
 
-def main(chainspec="dev"):
-    print(f"Using chainspec -> {chainspec}")
-    print(f"Using substrate binary -> {SUBSTRATE}")
-    print(f"Using ROOT_DIR -> {ROOT_DIR}")
-    # Setup directory tree for NODEs
-    setup_dirs()
-    # Generate keys and setup nodes
-    generate_keys(account_type=AccountKeyType.AccountId20)
-    if INTERACTIVE:
-        # Prompt user to proceed with key insertion
-        while True:
-            proceed = (
-                input("Keys generated. Proceed to insert? (yes/no): ").strip().lower()
-            )
-            if proceed in ["n", "no", "nay"]:
-                print("Aborting key insertion.")
-                return
-            elif proceed in ["y", "yes", "yay"]:
-                insert_keystore(chainspec)
-                break
-    # Modified chainspec with bootnodes inserted
-    chainspec = init_chainspec(chainspec)  # Initializes ROOT_DIR/chainspec.json
-    edit_vs_ss_authorities(
-        chainspec, NODES
-    )  # Custom handler for a particular chain using substrate-validator-set and pallet-session
-
+def start_network(chainspec):
+    print(f"Starting network with {len(NODES)} nodes...")
     # # Generate raw chainspec
     # run_command([
     #     "SUBSTRATE", "build-spec",
@@ -312,10 +289,51 @@ def main(chainspec="dev"):
     #         p.wait()
 
 
+def main(chainspec="dev"):
+    print(f"Using chainspec -> {chainspec}")
+    print(f"Using substrate binary -> {SUBSTRATE}")
+    print(f"Using ROOT_DIR -> {ROOT_DIR}")
+    # Setup directory tree for NODEs
+    setup_dirs()
+    # Generate keys and setup nodes
+    generate_keys(account_type=AccountKeyType.AccountId20)
+    if INTERACTIVE:
+        # Prompt user to proceed with key insertion
+        while True:
+            proceed = (
+                input("Keys generated. Proceed to insert? (yes/no): ").strip().lower()
+            )
+            if proceed in ["n", "no", "nay"]:
+                print("Aborting key insertion.")
+                return
+            elif proceed in ["y", "yes", "yay"]:
+                insert_keystore(chainspec)
+                break
+    # Modified chainspec with bootnodes inserted
+    chainspec = init_chainspec(chainspec)  # Initializes ROOT_DIR/chainspec.json
+    edit_vs_ss_authorities(
+        chainspec, NODES
+    )  # Custom handler for a particular chain using substrate-validator-set and pallet-session
+    if RUN_NETWORK:
+        if INTERACTIVE:
+            proceed = (
+                input("Start substrate network? (yes/y/yay/no/n): ").strip().lower()
+            )
+            if proceed in ["y", "yes", "yay"]:
+                start_network(chainspec)
+            else:
+                print("Aborting network start.")
+                sys.exit(0)
+        else:
+            start_network(chainspec)
+
+
 if __name__ == "__main__":
     if any(arg in sys.argv for arg in ["i", "interactive"]):
         INTERACTIVE = True
-    if len(sys.argv) > 1 and sys.argv[1] == "clean":
+    if any(arg in sys.argv for arg in ["r", "run"]):
+        RUN_NETWORK = True
+    if any(arg in sys.argv for arg in ["clean", "c"]):
         if os.path.exists(ROOT_DIR):
             print(f"Cleaning up {ROOT_DIR}...")
             shutil.rmtree(ROOT_DIR)
