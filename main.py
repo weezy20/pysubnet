@@ -49,7 +49,6 @@ Parses moonkey output, a subkey like tool but for Ethereum accounts
 
 
 def parse_moonkey_output(output):
-    print("Moonkey recvd", output)
     return {
         "private_key": output.split("Private Key:")[1].split()[0].strip(),
         "public_key": output.split("Address:")[1].split()[0].strip(),
@@ -182,7 +181,7 @@ def setup_dirs():
 
 def main(chainspec="dev"):
     print("Using chainspec -> ", chainspec)
-
+    # Setup directory tree for NODEs
     setup_dirs()
     # Generate keys and setup nodes
     generate_keys(account_type=AccountKeyType.AccountId20)
