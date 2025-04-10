@@ -25,3 +25,9 @@ to delete `ROOT_DIR` and start afresh.
 By default it uses `dev` chainspec. To provide your own chainspec pass in `--chainspec <your chainspec file>`
 
 All generated keys and node details are stored under `ROOT_DIR/pysubnet.json`
+
+You can also use interactive mode by passing in `i` or `interactive` as an extra flag:
+
+```sh
+python main.py i
+```

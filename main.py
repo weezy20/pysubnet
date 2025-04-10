@@ -6,7 +6,9 @@ import sys
 import shutil
 from pprint import pprint
 from accounts import AccountKeyType
+from chainspec_handlers import edit_vs_ss_authorities
 
+INTERACTIVE = False
 SUBSTRATE = os.path.abspath("substrate")  # your substrate node binary
 ROOT_DIR = os.path.abspath("./substrate-network")  # Default root_dir
 NODES = [
@@ -173,9 +175,24 @@ def insert_keystore(chainspec):
 def setup_dirs():
     # Create root-dir, if exists, prompt to clean, otherwise exit program
     os.makedirs(ROOT_DIR, exist_ok=True)
-    if os.listdir(ROOT_DIR):
+    if len(os.listdir(ROOT_DIR)) > 0 and INTERACTIVE:
+        clear_root = (
+            input("Root directory is not empty. Clear it out? yes/y/yay/no? ").lower().strip()
+        )
+        if clear_root in ["y", "yes", "yay"]:
+            shutil.rmtree(ROOT_DIR)
+            os.makedirs(ROOT_DIR, exist_ok=False)
+        else:
+            print(
+                "Exiting program. Run with `clean` or `i` to clear ROOT_DIR -> ",
+                ROOT_DIR,
+            )
+            sys.exit(1)
+
+    elif len(os.listdir(ROOT_DIR)) > 0:
         raise Exception(
-            "Root directory is not empty. Please clean or choose a different directory."
+            "Exiting program. Run with `clean` or `i` to clear ROOT_DIR -> ",
+            ROOT_DIR,
         )
     # Create directories
     for node in NODES:
@@ -183,14 +200,17 @@ def setup_dirs():
         node["base_path"] = f"{ROOT_DIR}/{node['name']}"
 
 
-"""Generate a new chainspec with bootnodes populated into it
-Final output is at ROOTDIR/chainspec.json"""
+"""Generate a new chainspec and insert bootnodes into it
+If chainspec file is provided as arg, that's used as template instead of generating a new one.
+This function is required to be called before other chainspec editing functions 
+to ensure that they work properly with ROOTDIR/chainspec.json
+"""
 
 
-def insert_bootnodes(chainspec):
+def init_chainspec(chainspec):
     c = None
     # Generate initial chainspec
-    if chainspec in ["dev", "local"]: # No explicit file passed
+    if chainspec in ["dev", "local"]:  # No explicit file passed
         print("Generating new local chainspec...")
         c = json.loads(
             run_command(
@@ -206,7 +226,7 @@ def insert_bootnodes(chainspec):
         )
     elif isinstance(chainspec, str) and os.path.isfile(chainspec):
         try:
-            with open(chainspec, 'r') as f:
+            with open(chainspec, "r") as f:
                 c = json.load(f)
         except json.JSONDecodeError:
             raise ValueError(f"File exists but is not valid JSON: {chainspec}")
@@ -219,6 +239,8 @@ def insert_bootnodes(chainspec):
     with open(f"{ROOT_DIR}/chainspec.json", "w") as f:
         json.dump(c, f, indent=2)
     print("Chainspec written to", f"{ROOT_DIR}/chainspec.json")
+    return f"{ROOT_DIR}/chainspec.json"
+
 
 def main(chainspec="dev"):
     print("Using chainspec -> ", chainspec)
@@ -226,16 +248,23 @@ def main(chainspec="dev"):
     setup_dirs()
     # Generate keys and setup nodes
     generate_keys(account_type=AccountKeyType.AccountId20)
-    # Prompt user to proceed with key insertion
-    while True:
-        proceed = input("Keys generated. Proceed to insert? (yes/no): ").strip().lower()
-        if proceed in ["n", "no", "nay"]:
-            print("Aborting key insertion.")
-            return
-        elif proceed in ["y", "yes", "yay"]:
-            insert_keystore(chainspec)
-            break
-    insert_bootnodes(chainspec)  # Ignore main(chainspec) for the moment...
+    if INTERACTIVE:
+        # Prompt user to proceed with key insertion
+        while True:
+            proceed = (
+                input("Keys generated. Proceed to insert? (yes/no): ").strip().lower()
+            )
+            if proceed in ["n", "no", "nay"]:
+                print("Aborting key insertion.")
+                return
+            elif proceed in ["y", "yes", "yay"]:
+                insert_keystore(chainspec)
+                break
+    # Modified chainspec with bootnodes inserted
+    chainspec = init_chainspec(chainspec)  # Initializes ROOT_DIR/chainspec.json
+    edit_vs_ss_authorities(
+        chainspec, NODES
+    )  # Custom handler for a particular chain using substrate-validator-set and pallet-session
 
     # # Generate raw chainspec
     # run_command([
@@ -280,6 +309,8 @@ def main(chainspec="dev"):
 
 
 if __name__ == "__main__":
+    if any(arg in sys.argv for arg in ["i", "interactive"]):
+        INTERACTIVE = True
     if len(sys.argv) > 1 and sys.argv[1] == "clean":
         if os.path.exists(ROOT_DIR):
             print(f"Cleaning up {ROOT_DIR}...")
@@ -288,7 +319,7 @@ if __name__ == "__main__":
         try:
             chainspec_index = sys.argv.index("--chainspec")
             chainspec = sys.argv[chainspec_index + 1]
-            main(chainspec=chainspec)
+            main(chainspec=os.path.abspath(chainspec))
         except IndexError:
             raise Exception("Missing path after --chainspec argument")
     else:
