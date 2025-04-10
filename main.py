@@ -57,7 +57,11 @@ def parse_moonkey_output(output):
 
 
 """Generate keys
-Default AccountId20
+Generates keys for the nodes:
+- Generates libp2p node-key
+- Generates AURA sr25519 key
+- Generates Grandpa ed25519 key
+- Generates validator account keys based on `account_type`
 """
 
 
@@ -163,7 +167,7 @@ def insert_keystore(chainspec):
         )
 
 
-def setup_dir():
+def setup_dirs():
     # Create root-dir, if exists, prompt to clean, otherwise exit program
     os.makedirs(ROOT_DIR, exist_ok=True)
     if os.listdir(ROOT_DIR):
@@ -179,7 +183,7 @@ def setup_dir():
 def main(chainspec="dev"):
     print("Using chainspec -> ", chainspec)
 
-    setup_dir()
+    setup_dirs()
     # Generate keys and setup nodes
     generate_keys(account_type=AccountKeyType.AccountId20)
     # Prompt user to proceed with key insertion
