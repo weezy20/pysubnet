@@ -5,7 +5,7 @@ import time
 import sys
 import shutil
 from pprint import pprint
-from enum import Enum
+from accounts import AccountKeyType
 
 SUBSTRATE = os.path.abspath("substrate")  # your substrate node binary
 ROOT_DIR = os.path.abspath("./substrate-network")  # Default root_dir
@@ -58,7 +58,7 @@ def parse_moonkey_output(output):
 """Generate keys"""
 
 
-def generate_keys():
+def generate_keys(accounts=AccountKeyType.AccountId20):
     for node in NODES:
         print(f"Setting up {node['name']}...")
         # Generate node key and peer ID
@@ -158,11 +158,6 @@ def setup_dir():
     for node in NODES:
         os.makedirs(f"{ROOT_DIR}/{node['name']}", exist_ok=False)  # Prevent overwrites
         node["base_path"] = f"{ROOT_DIR}/{node['name']}"
-
-
-class AccountKeyType(Enum):
-    AccountId32 = "AccountId32"  # Uses subkey to generate AccountID keys
-    AccountId20 = "AccountId20"  # Uses moonkey to generate AccountID keys
 
 
 def main(chainspec="dev"):
