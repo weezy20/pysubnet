@@ -177,7 +177,9 @@ def setup_dirs():
     os.makedirs(ROOT_DIR, exist_ok=True)
     if len(os.listdir(ROOT_DIR)) > 0 and INTERACTIVE:
         clear_root = (
-            input("Root directory is not empty. Clear it out? yes/y/yay/no? ").lower().strip()
+            input("Root directory is not empty. Clear it out? yes/y/yay/no? ")
+            .lower()
+            .strip()
         )
         if clear_root in ["y", "yes", "yay"]:
             shutil.rmtree(ROOT_DIR)
@@ -243,7 +245,9 @@ def init_chainspec(chainspec):
 
 
 def main(chainspec="dev"):
-    print("Using chainspec -> ", chainspec)
+    print(f"Using chainspec -> {chainspec}")
+    print(f"Using substrate binary -> {SUBSTRATE}")
+    print(f"Using ROOT_DIR -> {ROOT_DIR}")
     # Setup directory tree for NODEs
     setup_dirs()
     # Generate keys and setup nodes
