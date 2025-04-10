@@ -95,6 +95,7 @@ def generate_keys(account_type=AccountKeyType.AccountId20):
         node["aura-public-key"] = aura["public_key"]
         node["aura-private-key"] = aura["secret"]
         node["aura-secret-phrase"] = aura["secret_phrase"]
+        node["aura-ss58"] = aura["ss58_address"]
 
         # Generate Grandpa keys (Ed25519)
         grandpa_result = run_command(
@@ -105,6 +106,8 @@ def generate_keys(account_type=AccountKeyType.AccountId20):
         node["grandpa-public-key"] = grandpa["public_key"]
         node["grandpa-private-key"] = grandpa["secret"]
         node["grandpa-secret-phrase"] = grandpa["secret_phrase"]
+        node["grandpa-ss58"] = grandpa["ss58_address"]
+
 
         # Generate account keys
         match account_type:
@@ -245,15 +248,43 @@ def init_chainspec(chainspec):
     return f"{ROOT_DIR}/chainspec.json"
 
 
+def generate_raw_chainspec(chainspec: str) -> str:
+    """
+    Generates a raw chainspec file and writes it to ROOT_DIR/raw_chainspec.json.
+
+    Args:
+        chainspec (str): The chain specification to use (e.g., "dev", "local", filesystem path).
+
+    Returns:
+        str: The path to the generated raw chainspec file.
+    """
+    raw_chainspec_path = f"{ROOT_DIR}/raw_chainspec.json"
+    try:
+        result = subprocess.run(
+            [
+                SUBSTRATE,
+                "build-spec",
+                "--chain",
+                chainspec,
+                "--raw",
+            ],
+            cwd=ROOT_DIR,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        with open(raw_chainspec_path, "w") as f:
+            f.write(result.stdout)
+        print(f"Raw chainspec written to {raw_chainspec_path}")
+        return raw_chainspec_path
+    except subprocess.CalledProcessError as e:
+        raise Exception(f"Failed to generate raw chainspec: {e.stderr}")
+
+
 def start_network(chainspec):
     print(f"Starting network with {len(NODES)} nodes...")
-    # # Generate raw chainspec
-    # run_command([
-    #     "SUBSTRATE", "build-spec",
-    #     "--chain", "chainspec.json",
-    #     "--raw",
-    #     "--disable-default-bootnode"
-    # ], stdout=open("chainspec_raw.json", "w"))
+    # Generate raw chainspec
+    raw_chainspec = generate_raw_chainspec(chainspec)
 
     # # Start nodes
     # processes = []
@@ -289,8 +320,8 @@ def start_network(chainspec):
     #         p.wait()
 
 
-def main(chainspec="dev"):
-    print(f"Using chainspec -> {chainspec}")
+def main(chainspec_path_or_str="dev"):
+    print(f"Using chainspec -> {chainspec_path_or_str}")
     print(f"Using substrate binary -> {SUBSTRATE}")
     print(f"Using ROOT_DIR -> {ROOT_DIR}")
     # Setup directory tree for NODEs
@@ -307,10 +338,12 @@ def main(chainspec="dev"):
                 print("Aborting key insertion.")
                 return
             elif proceed in ["y", "yes", "yay"]:
-                insert_keystore(chainspec)
+                insert_keystore(chainspec_path_or_str)
                 break
     # Modified chainspec with bootnodes inserted
-    chainspec = init_chainspec(chainspec)  # Initializes ROOT_DIR/chainspec.json
+    chainspec = init_chainspec(
+        chainspec_path_or_str
+    )  # Initializes ROOT_DIR/chainspec.json
     edit_vs_ss_authorities(
         chainspec, NODES
     )  # Custom handler for a particular chain using substrate-validator-set and pallet-session
@@ -341,7 +374,7 @@ if __name__ == "__main__":
         try:
             chainspec_index = sys.argv.index("--chainspec")
             chainspec = sys.argv[chainspec_index + 1]
-            main(chainspec=os.path.abspath(chainspec))
+            main(chainspec_path_or_str=os.path.abspath(chainspec))
         except IndexError:
             raise Exception("Missing path after --chainspec argument")
     else:
