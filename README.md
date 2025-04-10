@@ -9,6 +9,8 @@ Currently works only for `AURA`+`Grandpa` chains however it's not too difficult 
 ### Pre-requisites
 Make sure you've got your `chainspec.json`, and the substrate binary, called `substrate` in the script (change as per your need).
 
+If using `AccountId20`s, requires [moonkey](https://github.com/PureStake/moonbeam/releases/download/v0.8.0/moonkey) in your $PATH
+
 ```shell
 python main.py
 ```
