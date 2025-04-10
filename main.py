@@ -6,8 +6,8 @@ import sys
 import shutil
 from pprint import pprint
 
-SUBSTRATE = "substrate"
-ROOT_DIR = "./substrate-testnet"
+SUBSTRATE = os.path.abspath("substrate")
+ROOT_DIR = os.path.abspath("./substrate-testnet")
 NODES = [
     {"name": "alice", "p2p_port": 30333, "rpc_port": 9944},
     {"name": "bob", "p2p_port": 30334, "rpc_port": 9945},
@@ -44,6 +44,7 @@ def parse_moonkey_output(output):
 
 
 def main(chainspec="dev"):
+    print(chainspec)
     # Create root-dir, if exists, prompt to clean, otherwise exit program
     os.makedirs(ROOT_DIR, exist_ok=True)
     if os.listdir(ROOT_DIR):
@@ -70,7 +71,7 @@ def main(chainspec="dev"):
         )
         node["libp2p-public-key"] = result.stderr.strip()
         print("\tLibp2p node key: ", node["libp2p-public-key"], "\n")
-        
+
         # Generate Aura keys (Sr25519)
         aura_result = run_command(["subkey", "generate", "--scheme", "Sr25519"])
         aura = parse_subkey_output(aura_result.stdout)
@@ -88,37 +89,53 @@ def main(chainspec="dev"):
         node["grandpa-secret-phrase"] = grandpa["secret_phrase"]
         pprint(node)
     # Prompt user to proceed with key insertion
-    while (True):
+    while True:
         proceed = input("Keys generated. Proceed to insert? (yes/no): ").strip().lower()
         if proceed in ["n", "no", "nay"]:
             print("Aborting key insertion.")
             return
         elif proceed in ["y", "yes", "yay"]:
             break
-    #     # Insert keys into keystore
-    #     run_command([
-    #         "SUBSTRATE", "key", "insert",
-    #         "--base-path", node["name"],
-    #         "--scheme", "Sr25519",
-    #         "--type", "aura",
-    #         "--suri", aura["secret_phrase"]
-    #     ])
-
-    #     run_command([
-    #         "SUBSTRATE", "key", "insert",
-    #         "--base-path", node["name"],
-    #         "--scheme", "Ed25519",
-    #         "--type", "gran",
-    #         "--suri", grandpa["secret_phrase"]
-    #     ])
-
-    #     node_data.append({
-    #         "peer_id": peer_id,
-    #         "aura_pub": aura["public_key"],
-    #         "grandpa_pub": grandpa["public_key"],
-    #         "ss58_address": aura["ss58_address"],
-    #         "p2p_port": node["p2p_port"]
-    #     })
+    # Insert keys into keystore
+    for node in NODES:
+        # Insert AURA keys
+        run_command(
+            [
+                SUBSTRATE,
+                "key",
+                "insert",
+                "--base-path",
+                node["name"],
+                "--chain",
+                chainspec,
+                "--scheme",
+                "Sr25519",
+                "--type",
+                "aura",
+                "--suri",
+                node["aura-private-key"],
+            ],
+            cwd=ROOT_DIR,
+        )
+        # Insert Grandpa Keys
+        run_command(
+            [
+                SUBSTRATE,
+                "key",
+                "insert",
+                "--base-path",
+                node["name"],
+                "--chain",
+                chainspec,
+                "--scheme",
+                "Ed25519",
+                "--type",
+                "gran",
+                "--suri",
+                node["grandpa-private-key"],
+            ],
+            cwd=ROOT_DIR,
+        )
 
     # # Generate initial chainspec
     # print("Generating chainspec...")
@@ -192,11 +209,12 @@ if __name__ == "__main__":
         if os.path.exists(ROOT_DIR):
             print(f"Cleaning up {ROOT_DIR}...")
             shutil.rmtree(ROOT_DIR)
-    chainspec = None
     if "--chainspec" in sys.argv:
         try:
             chainspec_index = sys.argv.index("--chainspec")
             chainspec = sys.argv[chainspec_index + 1]
+            main(chainspec=chainspec)
         except IndexError:
             raise Exception("Missing path after --chainspec argument")
-    main(chainspec)
+    else:
+        main()
