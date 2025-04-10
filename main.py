@@ -7,6 +7,7 @@ import shutil
 from pprint import pprint
 from accounts import AccountKeyType
 from chainspec_handlers import edit_vs_ss_authorities
+from ethereum import generate_ethereum_keypair
 
 INTERACTIVE = False
 RUN_NETWORK = False
@@ -41,16 +42,6 @@ def parse_subkey_output(output):
         "public_key": output.split("Public key (hex):")[1].split()[0].strip(),
         "ss58_address": output.split("Public key (SS58):")[1].split()[0].strip(),
         "account_id": output.split("Account ID:")[1].split()[0].strip(),
-    }
-
-
-def parse_moonkey_output(output):
-    """
-    Parses moonkey output, a subkey like tool but for Ethereum accounts
-    """
-    return {
-        "private_key": output.split("Private Key:")[1].split()[0].strip(),
-        "public_key": output.split("Address:")[1].split()[0].strip(),
     }
 
 
@@ -106,10 +97,9 @@ def generate_keys(account_type=AccountKeyType.AccountId20):
         # Generate account keys
         match account_type:
             case AccountKeyType.AccountId20:
-                validator_result = run_command(["moonkey"])
-                validator = parse_moonkey_output(validator_result.stdout)
+                validator = generate_ethereum_keypair()
                 node["validator-accountid20-private-key"] = validator["private_key"]
-                node["validator-accountid20-public-key"] = validator["public_key"]
+                node["validator-accountid20-public-key"] = validator["ethereum_address"]
             case AccountKeyType.AccountId32:
                 validator_result = run_command(
                     [SUBSTRATE, "key", "generate", "--scheme", "Sr25519"]
@@ -317,7 +307,7 @@ def start_network(chainspec):
     print("\nNetwork is running! Press Ctrl+C to stop")
     try:
         while True:
-            time.sleep(2) # 2 second sleep to reduce CPU usage.
+            time.sleep(2)  # 2 second sleep to reduce CPU usage.
     except KeyboardInterrupt:
         print("\nStopping nodes...")
         # Step 1: Send SIGTERM to all processes
