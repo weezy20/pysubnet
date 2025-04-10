@@ -377,6 +377,16 @@ if __name__ == "__main__":
         INTERACTIVE = True
     if any(arg in sys.argv for arg in ["r", "run"]):
         RUN_NETWORK = True
+    if "--root" in sys.argv:
+        try:
+            root_index = sys.argv.index("--root")
+            ROOT_DIR = os.path.abspath(sys.argv[root_index + 1])
+            if not os.path.exists(ROOT_DIR):
+                os.makedirs(ROOT_DIR, exist_ok=True)
+            if not os.path.isdir(ROOT_DIR):
+                raise Exception(f"Argument to --root is not a directory: {ROOT_DIR}")
+        except IndexError:
+            raise Exception("Missing path after --root argument")
     if any(arg in sys.argv for arg in ["clean", "c"]):
         if os.path.exists(ROOT_DIR):
             print(f"Cleaning up {ROOT_DIR}...")
