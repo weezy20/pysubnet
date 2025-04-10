@@ -49,16 +49,19 @@ Parses moonkey output, a subkey like tool but for Ethereum accounts
 
 
 def parse_moonkey_output(output):
+    print("Moonkey recvd", output)
     return {
-        "private_key": output.split("Priate Key:")[1].split()[0].strip(),
+        "private_key": output.split("Private Key:")[1].split()[0].strip(),
         "public_key": output.split("Address:")[1].split()[0].strip(),
     }
 
 
-"""Generate keys"""
+"""Generate keys
+Default AccountId20
+"""
 
 
-def generate_keys(accounts=AccountKeyType.AccountId20):
+def generate_keys(account_type=AccountKeyType.AccountId20):
     for node in NODES:
         print(f"Setting up {node['name']}...")
         # Generate node key and peer ID
@@ -94,6 +97,19 @@ def generate_keys(accounts=AccountKeyType.AccountId20):
         node["grandpa-secret-phrase"] = grandpa["secret_phrase"]
 
         # Generate account keys
+        match account_type:
+            case AccountKeyType.AccountId20:
+                validator_result = run_command(["moonkey"])
+                validator = parse_moonkey_output(validator_result.stdout)
+                node["validator-private-key"] = validator["private_key"]
+                node["validator-public-key"] = validator["public_key"]
+            case AccountKeyType.AccountId32:
+                validator_result = run_command(
+                    [SUBSTRATE, "key", "generate", "--scheme", "Sr25519"]
+                )
+                validator = parse_subkey_output(validator_result.stdout)
+                node["validator-private-key"] = validator["secret"]
+                node["validator-public-key"] = validator["public_key"]
         # pprint(node)
     # Write node configuration to a JSON file
     print("Saving network contents to -> ", f"{ROOT_DIR}/pysubnet.json")
@@ -165,7 +181,7 @@ def main(chainspec="dev"):
 
     setup_dir()
     # Generate keys and setup nodes
-    generate_keys(accounts=AccountKeyType.AccountId20)
+    generate_keys(account_type=AccountKeyType.AccountId20)
     # Prompt user to proceed with key insertion
     while True:
         proceed = input("Keys generated. Proceed to insert? (yes/no): ").strip().lower()
