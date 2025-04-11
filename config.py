@@ -13,7 +13,7 @@ class Config:
     clean: bool = False
     chainspec: str = "dev"
     bin: str = "substrate"
-    account_key_type: AccountKeyType = AccountKeyType.AccountId20
+    account_key_type: AccountKeyType = "ecdsa"
 
 
 def parse_args() -> Config:
@@ -59,7 +59,5 @@ def parse_args() -> Config:
         clean=args.clean,
         chainspec=args.chainspec or "dev",
         bin=os.path.abspath(args.bin),
-        account_key_type=args.account
+        account_key_type=args.account or AccountKeyType("ecdsa"),
     )
-
-

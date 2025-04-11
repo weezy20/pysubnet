@@ -366,10 +366,14 @@ def main(config: Config):
     # Modified chainspec with bootnodes inserted
     chainspec = init_chainspec(CHAINSPEC)  # Initializes ROOT_DIR/chainspec.json
     edit_vs_ss_authorities(
-        chainspec, NODES, config.account_key_type
+        chainspec, NODES, account_key_type=config.account_key_type
     )  # Custom handler for a particular chain using substrate-validator-set and pallet-session
     edit_account_balances(
-        chainspec, NODES, config.account_key_type, removeExisting=True, amount=5234
+        chainspec,
+        NODES,
+        account_key_type=config.account_key_type,
+        removeExisting=True,
+        amount=5234,
     )  # Custom handler for setting balances genesis
     if RUN_NETWORK:
         if INTERACTIVE:
