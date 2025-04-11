@@ -93,7 +93,7 @@ def parse_args() -> Config:
     )
     parser.add_argument(
         "--poa",
-        type=bool,
+        action="store_true",
         default=False,
         help="Enable Substrate-node-template PoA mode, i.e. assign all authorities equal weight in chainspec",
     )

@@ -143,8 +143,17 @@ def enable_poa(chainspec: str, config: Config):
     write_chainspec(chainspec, data)
 
 
-def enable_custom(chainspec: str, config: Config):
+def custom_network_config(chainspec: str, config: Config):
     """
     Modify the chainspec for custom network configuration.
     """
-    pass
+    edit_vs_ss_authorities(
+        chainspec, config.nodes, config.account_key_type
+    )  # Custom handler for a particular chain using substrate-validator-set and pallet-session
+    edit_account_balances(
+        chainspec,
+        config.nodes,
+        config.account_key_type,
+        removeExisting=True,  # Remove Existing balances
+        amount=5234,  # Balance
+    )  # Custom handler for setting balances genesis

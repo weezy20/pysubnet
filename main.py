@@ -6,7 +6,7 @@ import time
 import sys
 import shutil
 from accounts import AccountKeyType
-from chainspec_handlers import edit_account_balances, edit_vs_ss_authorities, enable_poa
+from chainspec_handlers import custom_network_config, enable_poa
 from config import parse_args, Config
 from ethereum import generate_ethereum_keypair
 
@@ -364,19 +364,11 @@ def main(config: Config):
         CHAINSPEC
     )  # Initializes ROOT_DIR/chainspec.json
     if config.poa:
+        # Compatible with substrate proof-of-authority type setups where session key is (aura, grandpa)
         enable_poa(chainspec, config)
     else:
-        # Custom Network Configuration
-        edit_vs_ss_authorities(
-            chainspec, NODES, config.account_key_type
-        )  # Custom handler for a particular chain using substrate-validator-set and pallet-session
-        edit_account_balances(
-            chainspec,
-            NODES,
-            config.account_key_type,
-            removeExisting=True,  # Remove Existing balances
-            amount=5234,  # Balance
-        )  # Custom handler for setting balances genesis
+        # Custom Network Configuration - define your own
+        custom_network_config(chainspec, config)
     if RUN_NETWORK:
         if INTERACTIVE:
             proceed = (
