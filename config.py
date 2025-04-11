@@ -2,6 +2,9 @@ import argparse
 import os
 from dataclasses import dataclass
 
+from accounts import AccountKeyType
+
+
 @dataclass
 class Config:
     interactive: bool = False
@@ -10,6 +13,7 @@ class Config:
     clean: bool = False
     chainspec: str = "dev"
     bin: str = "substrate"
+    account_key_type: AccountKeyType = AccountKeyType.AccountId20
 
 
 def parse_args() -> Config:
@@ -40,9 +44,14 @@ def parse_args() -> Config:
     parser.add_argument(
         "--bin", type=str, default="substrate", help="Path to substrate binary"
     )
+    parser.add_argument(
+        "--account",
+        type=AccountKeyType.from_string,
+        choices=list(AccountKeyType),
+        help="Type of account key ('ecdsa' for Ethereum-style, 'sr25519' for Substrate-style)",
+    )
 
     args = parser.parse_args()
-
     return Config(
         interactive=args.interactive,
         run_network=args.run_network,
@@ -50,4 +59,7 @@ def parse_args() -> Config:
         clean=args.clean,
         chainspec=args.chainspec or "dev",
         bin=os.path.abspath(args.bin),
+        account_key_type=args.account
     )
+
+

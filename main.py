@@ -6,8 +6,8 @@ import time
 import sys
 import shutil
 from accounts import AccountKeyType
-from chainspec_handlers import edit_accountid20_balances, edit_vs_ss_authorities
-from config import parse_args
+from chainspec_handlers import edit_account_balances, edit_vs_ss_authorities
+from config import parse_args, Config
 from ethereum import generate_ethereum_keypair
 
 global INTERACTIVE, RUN_NETWORK, SUBSTRATE, ROOT_DIR, CHAINSPEC
@@ -45,7 +45,7 @@ def parse_subkey_output(output):
     }
 
 
-def generate_keys(account_type=AccountKeyType.AccountId20):
+def generate_keys(account_key_type: AccountKeyType):
     """Generate keys
     Generates keys for the nodes:
     - Generates libp2p node-key
@@ -53,7 +53,6 @@ def generate_keys(account_type=AccountKeyType.AccountId20):
     - Generates Grandpa ed25519 key
     - Generates validator account keys based on `account_type`
     """
-
     for node in NODES:
         print(f"Setting up {node['name']}...")
         # Generate node key and peer ID
@@ -95,11 +94,15 @@ def generate_keys(account_type=AccountKeyType.AccountId20):
         node["grandpa-ss58"] = grandpa["ss58_address"]
 
         # Generate account keys
-        match account_type:
+        match account_key_type:
             case AccountKeyType.AccountId20:
                 validator = generate_ethereum_keypair()
                 node["validator-accountid20-private-key"] = validator["private_key"]
                 node["validator-accountid20-public-key"] = validator["ethereum_address"]
+                print(
+                    "Validator AccountId20 (ecdsa) public-key",
+                    node["validator-accountid20-public-key"],
+                )
             case AccountKeyType.AccountId32:
                 validator_result = run_command(
                     [SUBSTRATE, "key", "generate", "--scheme", "Sr25519"]
@@ -107,6 +110,11 @@ def generate_keys(account_type=AccountKeyType.AccountId20):
                 validator = parse_subkey_output(validator_result.stdout)
                 node["validator-accountid32-private-key"] = validator["secret"]
                 node["validator-accountid32-public-key"] = validator["public_key"]
+                node["validator-accountid32-ss58"] = validator["ss58_address"]
+                print(
+                    "Validator AccountId32 (sr25519) public-key",
+                    node["validator-accountid32-ss58"],
+                )
         # pprint(node)
     # Write node configuration to a JSON file
     print("Saving network contents to -> ", f"{ROOT_DIR}/pysubnet.json")
@@ -337,14 +345,14 @@ def start_network(chainspec):
         print("All nodes stopped and log files closed.")
 
 
-def main():
+def main(config: Config):
     print(f"Using chainspec -> {CHAINSPEC}")
     print(f"Using substrate binary -> {SUBSTRATE}")
     print(f"Using ROOT_DIR -> {ROOT_DIR}")
     # Setup directory tree for NODEs
     setup_dirs()
     # Generate keys and setup nodes
-    generate_keys(account_type=AccountKeyType.AccountId20)
+    generate_keys(account_key_type=config.account_key_type)
     if INTERACTIVE:
         # Prompt user to proceed with key insertion
         proceed = input("Keys generated. Proceed to insert? (yes/no): ").strip().lower()
@@ -358,10 +366,10 @@ def main():
     # Modified chainspec with bootnodes inserted
     chainspec = init_chainspec(CHAINSPEC)  # Initializes ROOT_DIR/chainspec.json
     edit_vs_ss_authorities(
-        chainspec, NODES
+        chainspec, NODES, config.account_key_type
     )  # Custom handler for a particular chain using substrate-validator-set and pallet-session
-    edit_accountid20_balances(
-        chainspec, NODES, removeExisting=True
+    edit_account_balances(
+        chainspec, NODES, config.account_key_type, removeExisting=True, amount=5234
     )  # Custom handler for setting balances genesis
     if RUN_NETWORK:
         if INTERACTIVE:
@@ -407,10 +415,10 @@ if __name__ == "__main__":
             with open(config.chainspec, "r") as f:
                 json.load(f)
             CHAINSPEC = os.path.abspath(config.chainspec)
-            main()
+            main(config)
         except json.JSONDecodeError:
             raise Exception(f"Chainspec file is not valid JSON: {config.chainspec}")
     elif config.chainspec in ["dev", "local"]:
-        main()
+        main(config)
     else:
         raise Exception(f"Invalid chainspec argument: {config.chainspec}")

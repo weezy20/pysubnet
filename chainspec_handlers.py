@@ -8,6 +8,18 @@ Then include your handler in the main script before `start_network()` is called
 
 import json
 
+from accounts import AccountKeyType
+
+
+def get_vkey(account_key_type: AccountKeyType) -> str:
+    match account_key_type:
+        case AccountKeyType.AccountId20:
+            return "validator-accountid20-public-key"
+        case AccountKeyType.AccountId32:
+            return "validator-accountid32-ss58"
+        case _:
+            raise ValueError(f"Unsupported AccountKeyType: {account_key_type}")
+
 
 def load_chainspec(chainspec):
     """
@@ -26,7 +38,7 @@ def write_chainspec(chainspec, data):
         json.dump(data, f, indent=2)
 
 
-def edit_vs_ss_authorities(chainspec, NODES):
+def edit_vs_ss_authorities(chainspec, NODES, account_key_type=AccountKeyType):
     """
     NOTE: This will overwrite `chainspec` passed in as argument.
     A handler to edit a chainspec with the substrate-validator-set pallet + pallet-sessions
@@ -60,22 +72,27 @@ def edit_vs_ss_authorities(chainspec, NODES):
     # Remove existing keys
     session["keys"] = []
     validatorSet["initialValidators"] = []
+    vkey = get_vkey(account_key_type)
     # Insert keys into pallet-sessions
     for node in NODES:
+        # Make entry for pallet-sessions
         entry_sessions = [
-            node["validator-accountid20-public-key"],
-            node["validator-accountid20-public-key"],
+            node[vkey],
+            node[vkey],
             {"aura": node["aura-ss58"], "grandpa": node["grandpa-ss58"]},
         ]
         session["keys"].append(entry_sessions)
-        entry_validatorSet = node["validator-accountid20-public-key"]
+        # Make entry for substrate-validator-set pallet
+        entry_validatorSet = node[vkey]
         validatorSet["initialValidators"].append(entry_validatorSet)
 
     # Write the modified data back to the original file
     write_chainspec(chainspec, data)
 
 
-def edit_accountid20_balances(chainspec, NODES, removeExisting=False, amount=500):
+def edit_account_balances(
+    chainspec, NODES, account_key_type=AccountKeyType, removeExisting=False, amount=500
+):
     """
     Modify the balances pallet in the chainspec.
 
@@ -92,13 +109,15 @@ def edit_accountid20_balances(chainspec, NODES, removeExisting=False, amount=500
     # Check if tokenDecimals is defined, if not use 18 decimals as default
     tokenDecimals = data["properties"].get("tokenDecimals", 18)
     unit = 10**tokenDecimals
+    vkey = get_vkey(account_key_type)
+
     # print(balances, type(balances))
     if removeExisting:
         balances = []
     # Add initial balances for each node
     for node in NODES:
         entry = [
-            node["validator-accountid20-public-key"],
+            node[vkey],
             amount * unit,
         ]
         balances.append(entry)
