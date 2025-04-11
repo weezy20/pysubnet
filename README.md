@@ -135,6 +135,16 @@ python main.py --bin ./target/release/my-custom-node
 ```
 
 ---
+### 🧑‍⚖️ Enable Proof-of-Authority (PoA) Mode
+
+For Substrate-node-template based chains (Simple Aura+Grandpa session keys), you can enable Proof-of-Authority (PoA) mode, which assigns all authorities equal weight in the chainspec and inserts their Aura-SS58 & Grandpa-SS58 keys. This is useful for testing and development purposes when starting out learning substrate. Also works for `frontier/template`
+as it's same in consensus to the default `substrate-node-template`
+
+```sh
+python main.py --poa -r 
+# Automates the tutorial "Start a private network with 3 nodes" that used to be in the now gone substrate.io website
+```
+---
 
 ## 🧾 Full Argument Reference
 
@@ -147,6 +157,7 @@ python main.py --bin ./target/release/my-custom-node
 | `--chainspec` | Provide a chainspec file to use as a starter template or use `dev` / `local` | `--chainspec dev` or `--chainspec ./custom.json` |
 | `--bin` | Path to Substrate binary | `--bin ./target/release/node-template` |
 | `--account` | AccountId type to use for ValidatorId, "ecdsa" or "sr25519" | `--account ecdsa` or `--account sr25519"` |
+| `--poa` | Enable POA. Absence of this flag branches code into `custom_network_config` which is user defined | `python main.py --poa --run` |
 
 ---
 
