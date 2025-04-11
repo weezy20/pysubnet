@@ -146,6 +146,7 @@ python main.py --bin ./target/release/my-custom-node
 | `-c`, `--clean` | Clean the root directory before starting | `python main.py -c` |
 | `--chainspec` | Provide a chainspec file to use as a starter template or use `dev` / `local` | `--chainspec dev` or `--chainspec ./custom.json` |
 | `--bin` | Path to Substrate binary | `--bin ./target/release/node-template` |
+| `--account` | AccountId type to use for ValidatorId, "ecdsa" or "sr25519" | `--account ecdsa` or `--account sr25519"` |
 
 ---
 
