@@ -6,18 +6,11 @@ import time
 import sys
 import shutil
 from accounts import AccountKeyType
-from chainspec_handlers import edit_account_balances, edit_vs_ss_authorities
+from chainspec_handlers import custom_network_config, enable_poa
 from config import parse_args, Config
 from ethereum import generate_ethereum_keypair
 
-global INTERACTIVE, RUN_NETWORK, SUBSTRATE, ROOT_DIR, CHAINSPEC
-
-NODES = [
-    {"name": "alice", "p2p-port": 30333, "rpc-port": 9944, "prometheus-port": 9615},
-    {"name": "bob", "p2p-port": 30334, "rpc-port": 9945, "prometheus-port": 9616},
-    {"name": "charlie", "p2p-port": 30335, "rpc-port": 9946, "prometheus-port": 9617},
-    {"name": "david", "p2p-port": 30336, "rpc-port": 9947, "prometheus-port": 9618},
-]
+global INTERACTIVE, RUN_NETWORK, SUBSTRATE, ROOT_DIR, CHAINSPEC, NODES
 
 
 def run_command(command, cwd=None):
@@ -199,7 +192,7 @@ def setup_dirs():
         node["base_path"] = f"{ROOT_DIR}/{node['name']}"
 
 
-def init_chainspec(chainspec):
+def init_bootnodes_chainspec(chainspec):
     """Generate a new chainspec and insert bootnodes into it
     If chainspec file is provided as arg, that's used as template instead of generating a new one.
     This function is required to be called before other chainspec editing functions
@@ -249,7 +242,7 @@ def generate_raw_chainspec(chainspec: str) -> str:
     Returns:
         str: The path to the generated raw chainspec file.
     """
-    raw_chainspec_path = f"{ROOT_DIR}/raw_chainspec.json"
+    raw_chainspec_path = os.path.join(ROOT_DIR, "raw_chainspec.json")
     try:
         result = subprocess.run(
             [
@@ -267,6 +260,7 @@ def generate_raw_chainspec(chainspec: str) -> str:
         with open(raw_chainspec_path, "w") as f:
             f.write(result.stdout)
         print(f"Raw chainspec written to {raw_chainspec_path}")
+        config.raw_chainspec = raw_chainspec_path
         return raw_chainspec_path
     except subprocess.CalledProcessError as e:
         raise Exception(f"Failed to generate raw chainspec: {e.stderr}")
@@ -366,17 +360,15 @@ def main(config: Config):
     else:
         insert_keystore(CHAINSPEC)
     # Modified chainspec with bootnodes inserted
-    chainspec = init_chainspec(CHAINSPEC)  # Initializes ROOT_DIR/chainspec.json
-    edit_vs_ss_authorities(
-        chainspec, NODES, config.account_key_type
-    )  # Custom handler for a particular chain using substrate-validator-set and pallet-session
-    edit_account_balances(
-        chainspec,
-        NODES,
-        config.account_key_type,
-        removeExisting=True,  # Remove Existing balances
-        amount=5234,  # Balance
-    )  # Custom handler for setting balances genesis
+    chainspec = init_bootnodes_chainspec(
+        CHAINSPEC
+    )  # Initializes ROOT_DIR/chainspec.json
+    if config.poa:
+        # Compatible with substrate proof-of-authority type setups where session key is (aura, grandpa)
+        enable_poa(chainspec, config)
+    else:
+        # Custom Network Configuration - define your own
+        custom_network_config(chainspec, config)
     if RUN_NETWORK:
         if INTERACTIVE:
             proceed = (
@@ -399,6 +391,7 @@ if __name__ == "__main__":
     ROOT_DIR = config.root_dir
     SUBSTRATE = config.bin
     CHAINSPEC = config.chainspec
+    NODES = config.nodes
 
     # Validate root-dir
     if not os.path.exists(config.root_dir):

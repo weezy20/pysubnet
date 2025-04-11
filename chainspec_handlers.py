@@ -9,6 +9,7 @@ Then include your handler in the main script before `start_network()` is called
 import json
 
 from accounts import AccountKeyType
+from config import Config
 
 
 def load_chainspec(chainspec: str):
@@ -121,3 +122,38 @@ def edit_account_balances(
     data["genesis"]["runtimeGenesis"]["patch"]["balances"]["balances"] = balances
     # Write the modified data back to the original file
     write_chainspec(chainspec, data)
+
+
+def enable_poa(chainspec: str, config: Config):
+    data = load_chainspec(chainspec)
+    # Add PoA specific configurations
+    aura_authorities = []
+    gran_authorities = []
+    for node in config.nodes:
+        entry_aura = node["aura-ss58"]
+        aura_authorities.append(entry_aura)
+        entry_grandpa = [node["grandpa-ss58"], 1]
+        gran_authorities.append(entry_grandpa)
+
+    data["genesis"]["runtimeGenesis"]["patch"]["aura"]["authorities"] = aura_authorities
+    data["genesis"]["runtimeGenesis"]["patch"]["grandpa"]["authorities"] = (
+        gran_authorities
+    )
+    # Write the modified data back to the original file
+    write_chainspec(chainspec, data)
+
+
+def custom_network_config(chainspec: str, config: Config):
+    """
+    Modify the chainspec for custom network configuration.
+    """
+    edit_vs_ss_authorities(
+        chainspec, config.nodes, config.account_key_type
+    )  # Custom handler for a particular chain using substrate-validator-set and pallet-session
+    edit_account_balances(
+        chainspec,
+        config.nodes,
+        config.account_key_type,
+        removeExisting=True,  # Remove Existing balances
+        amount=5234,  # Balance
+    )  # Custom handler for setting balances genesis
