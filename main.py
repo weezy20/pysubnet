@@ -7,12 +7,11 @@ import sys
 import shutil
 from accounts import AccountKeyType
 from chainspec_handlers import edit_accountid20_balances, edit_vs_ss_authorities
+from config import parse_args
 from ethereum import generate_ethereum_keypair
 
-INTERACTIVE = False
-RUN_NETWORK = False
-SUBSTRATE = os.path.abspath("substrate")  # your substrate node binary
-ROOT_DIR = os.path.abspath("./network")  # Default root_dir
+global INTERACTIVE, RUN_NETWORK, SUBSTRATE, ROOT_DIR, CHAINSPEC
+
 NODES = [
     {"name": "alice", "p2p-port": 30333, "rpc-port": 9944, "prometheus-port": 9615},
     {"name": "bob", "p2p-port": 30334, "rpc-port": 9945, "prometheus-port": 9616},
@@ -338,8 +337,8 @@ def start_network(chainspec):
         print("All nodes stopped and log files closed.")
 
 
-def main(chainspec_path_or_str="dev"):
-    print(f"Using chainspec -> {chainspec_path_or_str}")
+def main():
+    print(f"Using chainspec -> {CHAINSPEC}")
     print(f"Using substrate binary -> {SUBSTRATE}")
     print(f"Using ROOT_DIR -> {ROOT_DIR}")
     # Setup directory tree for NODEs
@@ -353,13 +352,11 @@ def main(chainspec_path_or_str="dev"):
             print("Aborting key insertion.")
             return
         elif proceed in ["y", "yes", "yay"]:
-            insert_keystore(chainspec_path_or_str)
+            insert_keystore(CHAINSPEC)
     else:
-        insert_keystore(chainspec_path_or_str)
+        insert_keystore(CHAINSPEC)
     # Modified chainspec with bootnodes inserted
-    chainspec = init_chainspec(
-        chainspec_path_or_str
-    )  # Initializes ROOT_DIR/chainspec.json
+    chainspec = init_chainspec(CHAINSPEC)  # Initializes ROOT_DIR/chainspec.json
     edit_vs_ss_authorities(
         chainspec, NODES
     )  # Custom handler for a particular chain using substrate-validator-set and pallet-session
@@ -381,40 +378,39 @@ def main(chainspec_path_or_str="dev"):
 
 
 if __name__ == "__main__":
-    if any(arg in sys.argv for arg in ["i", "interactive"]):
-        INTERACTIVE = True
-    if any(arg in sys.argv for arg in ["r", "run"]):
-        RUN_NETWORK = True
-    if "--root" in sys.argv:
+    config = parse_args()
+
+    INTERACTIVE = config.interactive
+    RUN_NETWORK = config.run_network
+    ROOT_DIR = config.root_dir
+    SUBSTRATE = config.bin
+    CHAINSPEC = config.chainspec
+
+    # Validate root-dir
+    if not os.path.exists(config.root_dir):
+        os.makedirs(config.root_dir, exist_ok=True)
+    if not os.path.isdir(config.root_dir):
+        raise Exception(f"Root path is not a directory: {config.root_dir}")
+
+    # Run clean
+    if config.clean:
+        print(f"Cleaning up {config.root_dir}...")
+        shutil.rmtree(config.root_dir)
+
+    # Validate SUBSTRATE points to a file on the system and is executable
+    if not os.path.isfile(config.bin) or not os.access(config.bin, os.X_OK):
+        raise Exception(f"Substrate binary not found or not executable: {config.bin}")
+
+    # Validate chainspec if it's a valid json file or one of "dev", "local"
+    if os.path.isfile(config.chainspec):
         try:
-            root_index = sys.argv.index("--root")
-            ROOT_DIR = os.path.abspath(sys.argv[root_index + 1])
-            if not os.path.exists(ROOT_DIR):
-                os.makedirs(ROOT_DIR, exist_ok=True)
-            if not os.path.isdir(ROOT_DIR):
-                raise Exception(f"Argument to --root is not a directory: {ROOT_DIR}")
-        except IndexError:
-            raise Exception("Missing path after --root argument")
-    if any(arg in sys.argv for arg in ["clean", "c"]):
-        if os.path.exists(ROOT_DIR):
-            print(f"Cleaning up {ROOT_DIR}...")
-            shutil.rmtree(ROOT_DIR)
-    if "--chainspec" in sys.argv:
-        try:
-            chainspec_index = sys.argv.index("--chainspec")
-            chainspec = sys.argv[chainspec_index + 1]
-            if os.path.isfile(chainspec):
-                try:
-                    with open(chainspec, "r") as f:
-                        json.load(f)
-                        main(chainspec_path_or_str=os.path.abspath(chainspec))
-                except json.JSONDecodeError:
-                    raise Exception(f"Chainspec file is not valid JSON: {chainspec}")
-            elif chainspec not in ["dev", "local"]:
-                raise Exception(f"Invalid chainspec argument: {chainspec}")
-            else:
-                main(chainspec_path_or_str=chainspec)
-        except IndexError:
-            raise Exception("Missing path after --chainspec argument")
-    else:
+            with open(config.chainspec, "r") as f:
+                json.load(f)
+            CHAINSPEC = os.path.abspath(config.chainspec)
+            main()
+        except json.JSONDecodeError:
+            raise Exception(f"Chainspec file is not valid JSON: {config.chainspec}")
+    elif config.chainspec in ["dev", "local"]:
         main()
+    else:
+        raise Exception(f"Invalid chainspec argument: {config.chainspec}")
