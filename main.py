@@ -100,8 +100,9 @@ def generate_keys(account_key_type: AccountKeyType):
                 node["validator-accountid20-private-key"] = validator["private_key"]
                 node["validator-accountid20-public-key"] = validator["ethereum_address"]
                 print(
-                    "Validator AccountId20 (ecdsa) public-key",
+                    "\tValidator AccountId20 (ecdsa) public-key",
                     node["validator-accountid20-public-key"],
+                    "\n",
                 )
             case AccountKeyType.AccountId32:
                 validator_result = run_command(
@@ -112,8 +113,9 @@ def generate_keys(account_key_type: AccountKeyType):
                 node["validator-accountid32-public-key"] = validator["public_key"]
                 node["validator-accountid32-ss58"] = validator["ss58_address"]
                 print(
-                    "Validator AccountId32 (sr25519) public-key",
+                    "\tValidator AccountId32 (sr25519) public-key",
                     node["validator-accountid32-ss58"],
+                    "\n",
                 )
         # pprint(node)
     # Write node configuration to a JSON file
