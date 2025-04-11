@@ -1,4 +1,29 @@
+"""
+Definitions for handling chainspec files.
+Define your chainspec editors here.
+Use `load_chainspec` & `write_chainspec` for loading and writing chainspec files.
+Your editor looks like : <load_chainspec><your edits><write_chainspec>
+Then include your handler in the main script before `start_network()` is called
+"""
+
 import json
+
+
+def load_chainspec(chainspec):
+    """
+    Load chainspec from a JSON file.
+    """
+    with open(chainspec, "r") as f:
+        data = json.load(f)
+    return data
+
+
+def write_chainspec(chainspec, data):
+    """
+    Write chainspec to a JSON file.
+    """
+    with open(chainspec, "w") as f:
+        json.dump(data, f, indent=2)
 
 
 def edit_vs_ss_authorities(chainspec, NODES):
@@ -28,8 +53,7 @@ def edit_vs_ss_authorities(chainspec, NODES):
               ]
             }
     """
-    with open(chainspec, "r") as f:
-        data = json.load(f)
+    data = load_chainspec(chainspec)
     genesis = data["genesis"]["runtimeGenesis"]["patch"]
     session = genesis["session"]
     validatorSet = genesis["validatorSet"]
@@ -48,5 +72,36 @@ def edit_vs_ss_authorities(chainspec, NODES):
         validatorSet["initialValidators"].append(entry_validatorSet)
 
     # Write the modified data back to the original file
-    with open(chainspec, "w") as f:
-        json.dump(data, f, indent=2)
+    write_chainspec(chainspec, data)
+
+
+def edit_accountid20_balances(chainspec, NODES, removeExisting=False, amount=500):
+    """
+    Modify the balances pallet in the chainspec.
+
+    Parameters:
+    - removeExisting (bool): If True, clears all existing balances. Defaults to False.
+    - amount (int): The number of tokens to allocate to each account.
+      This value is multiplied by tokenDecimals properties.
+      Defaults to 500 tokens w/ 18 decimal places if not defined in template chainspec.
+
+    By default, existing balances are retained, and the specified amount is added for each node.
+    """
+    data = load_chainspec(chainspec)
+    balances = data["genesis"]["runtimeGenesis"]["patch"]["balances"]["balances"]
+    # Check if tokenDecimals is defined, if not use 18 decimals as default
+    tokenDecimals = data["properties"].get("tokenDecimals", 18)
+    unit = 10**tokenDecimals
+    # print(balances, type(balances))
+    if removeExisting:
+        balances = []
+    # Add initial balances for each node
+    for node in NODES:
+        entry = [
+            node["validator-accountid20-public-key"],
+            amount * unit,
+        ]
+        balances.append(entry)
+    data["genesis"]["runtimeGenesis"]["patch"]["balances"]["balances"] = balances
+    # Write the modified data back to the original file
+    write_chainspec(chainspec, data)

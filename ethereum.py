@@ -31,6 +31,7 @@ def generate_ethereum_keypair():
         "ethereum_address": address,
     }
 
+
 if __name__ == "__main__":
     print("Ethereum keypair generated:")
     pprint(generate_ethereum_keypair())

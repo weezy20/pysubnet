@@ -6,7 +6,7 @@ import time
 import sys
 import shutil
 from accounts import AccountKeyType
-from chainspec_handlers import edit_vs_ss_authorities
+from chainspec_handlers import edit_accountid20_balances, edit_vs_ss_authorities
 from ethereum import generate_ethereum_keypair
 
 INTERACTIVE = False
@@ -309,12 +309,12 @@ def start_network(chainspec):
 
     print("\nNetwork is running! Press Ctrl+C to stop")
     print("Check logs: ")
-    pprint(    
+    pprint(
         [os.path.join(ROOT_DIR, node["name"], node["name"] + ".log") for node in NODES],
     )
     try:
         while True:
-            time.sleep(2)  # 2 second sleep to reduce CPU usage.
+            time.sleep(1.5)  # 1.5 second sleep to reduce CPU usage.
     except KeyboardInterrupt:
         print("\nStopping nodes...")
         # Step 1: Send SIGTERM to all processes
@@ -363,6 +363,9 @@ def main(chainspec_path_or_str="dev"):
     edit_vs_ss_authorities(
         chainspec, NODES
     )  # Custom handler for a particular chain using substrate-validator-set and pallet-session
+    edit_accountid20_balances(
+        chainspec, NODES, removeExisting=True
+    )  # Custom handler for setting balances genesis
     if RUN_NETWORK:
         if INTERACTIVE:
             proceed = (
