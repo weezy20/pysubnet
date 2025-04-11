@@ -21,7 +21,8 @@ class AccountKeyType(Enum):
     def get_vkey(self) -> str:
         """
         Returns the vkey string based on the AccountKeyType instance.
-        The vkey is a string key used to identify ValidatorId
+        The vkey is a string key used to identify ValidatorId which here is either
+        the ecdsa pub key or ss58 address
         """
         match self:
             case AccountKeyType.AccountId20:

@@ -1,6 +1,7 @@
 import argparse
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import List, Dict
 
 from accounts import AccountKeyType
 
@@ -12,8 +13,38 @@ class Config:
     root_dir: str = "./network"
     clean: bool = False
     chainspec: str = "dev"
+    raw_chainspec: str = None
     bin: str = "substrate"
     account_key_type: AccountKeyType = AccountKeyType.AccountId20
+    poa: bool = False
+    nodes: List[Dict] = field(
+        default_factory=lambda: [
+            {
+                "name": "alice",
+                "p2p-port": 30333,
+                "rpc-port": 9944,
+                "prometheus-port": 9615,
+            },
+            {
+                "name": "bob",
+                "p2p-port": 30334,
+                "rpc-port": 9945,
+                "prometheus-port": 9616,
+            },
+            {
+                "name": "charlie",
+                "p2p-port": 30335,
+                "rpc-port": 9946,
+                "prometheus-port": 9617,
+            },
+            {
+                "name": "david",
+                "p2p-port": 30336,
+                "rpc-port": 9947,
+                "prometheus-port": 9618,
+            },
+        ]
+    )
 
 
 def parse_args() -> Config:
@@ -60,6 +91,12 @@ def parse_args() -> Config:
         default=AccountKeyType.AccountId20,
         help="Type of account key ('ecdsa' for Ethereum-style, 'sr25519' for Substrate-style)",
     )
+    parser.add_argument(
+        "--poa",
+        type=bool,
+        default=False,
+        help="Enable Substrate-node-template PoA mode, i.e. assign all authorities equal weight in chainspec",
+    )
 
     args = parser.parse_args()
     # !! WARNING: argsparse will actually set non-supplied flags to None! This works for boolean values but
@@ -73,4 +110,5 @@ def parse_args() -> Config:
         chainspec=args.chainspec,
         bin=os.path.abspath(args.bin),
         account_key_type=args.account,
+        poa=args.poa,
     )

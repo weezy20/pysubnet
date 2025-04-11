@@ -9,6 +9,7 @@ Then include your handler in the main script before `start_network()` is called
 import json
 
 from accounts import AccountKeyType
+from config import Config
 
 
 def load_chainspec(chainspec: str):
@@ -121,3 +122,29 @@ def edit_account_balances(
     data["genesis"]["runtimeGenesis"]["patch"]["balances"]["balances"] = balances
     # Write the modified data back to the original file
     write_chainspec(chainspec, data)
+
+
+def enable_poa(chainspec: str, config: Config):
+    data = load_chainspec(chainspec)
+    # Add PoA specific configurations
+    aura_authorities = []
+    gran_authorities = []
+    for node in config.nodes:
+        entry_aura = node["aura-ss58"]
+        aura_authorities.append(entry_aura)
+        entry_grandpa = [node["grandpa-ss58"], 1]
+        gran_authorities.append(entry_grandpa)
+
+    data["genesis"]["runtimeGenesis"]["patch"]["aura"]["authorities"] = aura_authorities
+    data["genesis"]["runtimeGenesis"]["patch"]["grandpa"]["authorities"] = (
+        gran_authorities
+    )
+    # Write the modified data back to the original file
+    write_chainspec(chainspec, data)
+
+
+def enable_custom(chainspec: str, config: Config):
+    """
+    Modify the chainspec for custom network configuration.
+    """
+    pass
