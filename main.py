@@ -323,7 +323,7 @@ def start_network(chainspec):
         for node_proc in node_procs:
             p = node_proc["process"]
             try:
-                p.wait(timeout=10)  # Wait up to 10 seconds
+                p.wait(timeout=2)  # Wait up to 2 seconds
             except subprocess.TimeoutExpired:
                 print(
                     f"Process {p.pid} ({node_proc['name']}) did not terminate in time, killing it."
