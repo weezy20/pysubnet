@@ -17,3 +17,16 @@ class AccountKeyType(Enum):
             raise argparse.ArgumentTypeError(
                 f"Invalid account type. Choose from: {', '.join([e.value for e in cls])}"
             )
+
+    def get_vkey(self) -> str:
+        """
+        Returns the vkey string based on the AccountKeyType instance.
+        The vkey is a string key used to identify ValidatorId
+        """
+        match self:
+            case AccountKeyType.AccountId20:
+                return "validator-accountid20-public-key"
+            case AccountKeyType.AccountId32:
+                return "validator-accountid32-ss58"
+            case _:
+                raise ValueError(f"Unsupported AccountKeyType: {self}")

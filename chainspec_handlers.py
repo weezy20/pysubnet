@@ -11,16 +11,6 @@ import json
 from accounts import AccountKeyType
 
 
-def get_vkey(account_key_type: AccountKeyType) -> str:
-    match account_key_type:
-        case AccountKeyType.AccountId20:
-            return "validator-accountid20-public-key"
-        case AccountKeyType.AccountId32:
-            return "validator-accountid32-ss58"
-        case _:
-            raise ValueError(f"Unsupported AccountKeyType: {account_key_type}")
-
-
 def load_chainspec(chainspec):
     """
     Load chainspec from a JSON file.
@@ -72,7 +62,7 @@ def edit_vs_ss_authorities(chainspec, NODES, account_key_type=AccountKeyType):
     # Remove existing keys
     session["keys"] = []
     validatorSet["initialValidators"] = []
-    vkey = get_vkey(account_key_type)
+    vkey = account_key_type.get_vkey()
     # Insert keys into pallet-sessions
     for node in NODES:
         # Make entry for pallet-sessions
@@ -109,7 +99,7 @@ def edit_account_balances(
     # Check if tokenDecimals is defined, if not use 18 decimals as default
     tokenDecimals = data["properties"].get("tokenDecimals", 18)
     unit = 10**tokenDecimals
-    vkey = get_vkey(account_key_type)
+    vkey = account_key_type.get_vkey()
 
     # print(balances, type(balances))
     if removeExisting:
