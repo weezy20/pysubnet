@@ -1,10 +1,10 @@
 import os
 import json
+from pprint import pprint
 import subprocess
 import time
 import sys
 import shutil
-from pprint import pprint
 from accounts import AccountKeyType
 from chainspec_handlers import edit_vs_ss_authorities
 from ethereum import generate_ethereum_keypair
@@ -14,9 +14,9 @@ RUN_NETWORK = False
 SUBSTRATE = os.path.abspath("substrate")  # your substrate node binary
 ROOT_DIR = os.path.abspath("./network")  # Default root_dir
 NODES = [
-    {"name": "alice", "p2p_port": 30333, "rpc_port": 9944},
-    {"name": "bob", "p2p_port": 30334, "rpc_port": 9945},
-    {"name": "charlie", "p2p_port": 30335, "rpc_port": 9946},
+    {"name": "alice", "p2p-port": 30333, "rpc-port": 9944, "prometheus-port": 9615},
+    {"name": "bob", "p2p-port": 30334, "rpc-port": 9945, "prometheus-port": 9616},
+    {"name": "charlie", "p2p-port": 30335, "rpc-port": 9946, "prometheus-port": 9617},
 ]
 
 
@@ -219,7 +219,7 @@ def init_chainspec(chainspec):
             raise ValueError(f"File exists but is not valid JSON: {chainspec}")
     # Set bootnodes
     c["bootNodes"] = [
-        f"/ip4/127.0.0.1/tcp/{n['p2p_port']}/p2p/{n['libp2p-public-key']}"
+        f"/ip4/127.0.0.1/tcp/{n['p2p-port']}/p2p/{n['libp2p-public-key']}"
         for n in NODES
     ]
 
@@ -278,9 +278,9 @@ def start_network(chainspec):
             "--chain",
             raw_chainspec,
             "--port",
-            str(node["p2p_port"]),
+            str(node["p2p-port"]),
             "--rpc-port",
-            str(node["rpc_port"]),
+            str(node["rpc-port"]),
             "--validator",
             "--name",
             node["name"],
@@ -288,6 +288,8 @@ def start_network(chainspec):
             f"{node['name']}/{node['name']}-node-private-key",
             "--rpc-cors",
             "all",
+            "--prometheus-port",
+            str(node["prometheus-port"]),
             # "--rpc-external", # is an error to run with --validator
         ]
         log_file = open(f"{ROOT_DIR}/{node['name']}/{node['name']}.log", "w")
@@ -305,6 +307,10 @@ def start_network(chainspec):
         print(f"Started {node['name']} (PID: {p.pid})")
 
     print("\nNetwork is running! Press Ctrl+C to stop")
+    print("Check logs: ")
+    pprint(    
+        [os.path.join(ROOT_DIR, node["name"], node["name"] + ".log") for node in NODES],
+    )
     try:
         while True:
             time.sleep(2)  # 2 second sleep to reduce CPU usage.
