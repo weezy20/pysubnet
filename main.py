@@ -17,6 +17,7 @@ NODES = [
     {"name": "alice", "p2p-port": 30333, "rpc-port": 9944, "prometheus-port": 9615},
     {"name": "bob", "p2p-port": 30334, "rpc-port": 9945, "prometheus-port": 9616},
     {"name": "charlie", "p2p-port": 30335, "rpc-port": 9946, "prometheus-port": 9617},
+    {"name": "david", "p2p-port": 30336, "rpc-port": 9947, "prometheus-port": 9618},
 ]
 
 
