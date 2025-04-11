@@ -72,5 +72,5 @@ def parse_args() -> Config:
         clean=args.clean,
         chainspec=args.chainspec,
         bin=os.path.abspath(args.bin),
-        account_key_type=args.account
+        account_key_type=args.account,
     )

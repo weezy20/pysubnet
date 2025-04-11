@@ -11,16 +11,17 @@ import json
 from accounts import AccountKeyType
 
 
-def load_chainspec(chainspec):
+def load_chainspec(chainspec: str):
     """
     Load chainspec from a JSON file.
+    Chainspec is expected to be an os.path at this stage
     """
     with open(chainspec, "r") as f:
         data = json.load(f)
     return data
 
 
-def write_chainspec(chainspec, data):
+def write_chainspec(chainspec: str, data):
     """
     Write chainspec to a JSON file.
     """
@@ -28,7 +29,9 @@ def write_chainspec(chainspec, data):
         json.dump(data, f, indent=2)
 
 
-def edit_vs_ss_authorities(chainspec, NODES, account_key_type=AccountKeyType):
+def edit_vs_ss_authorities(
+    chainspec: str, NODES: list[dict], account_key_type: AccountKeyType
+):
     """
     NOTE: This will overwrite `chainspec` passed in as argument.
     A handler to edit a chainspec with the substrate-validator-set pallet + pallet-sessions
@@ -81,7 +84,11 @@ def edit_vs_ss_authorities(chainspec, NODES, account_key_type=AccountKeyType):
 
 
 def edit_account_balances(
-    chainspec, NODES, account_key_type=AccountKeyType, removeExisting=False, amount=500
+    chainspec: str,
+    NODES: list[dict],
+    account_key_type: AccountKeyType,
+    removeExisting=False,
+    amount=500,
 ):
     """
     Modify the balances pallet in the chainspec.
