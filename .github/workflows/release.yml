@@ -10,21 +10,28 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
+
+    - name: Install UV
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.13'
 
-    - name: Install PyInstaller
-      run: pip install pyinstaller
+    - name: Install dependencies with UV
+      run: |
+        uv pip install --system .  # Installs from pyproject.toml
+        uv pip install --system pyinstaller
 
     - name: Build executable
-      run: pyinstaller --onefile main.py --name pysubnet
+      run: pyinstaller --onefile src/main.py --name pysubnet
 
     - name: Upload release artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: pysubnet
         path: dist/pysubnet
@@ -34,10 +41,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - name: Download artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: pysubnet
+
     - name: Upload release to GitHub
       uses: ncipollo/release-action@v1
       with:
-        artifacts: dist/pysubnet
+        artifacts: pysubnet
         token: ${{ secrets.GITHUB_TOKEN }}
         tag: ${{ github.ref_name }}
         body: "Release ${{ github.ref_name }} of pysubnet"

@@ -4,8 +4,23 @@ version = "1.0.0"
 description = "Deploy a substrate permissioned network using python"
 readme = "README.md"
 requires-python = ">=3.13"
+authors = [{ name = "Abhishek Shah", email = "abhishekshah3@gmail.com" }]
+license = { file = "LICENSE" }
+
 dependencies = [
     "eth-hash[pysha3]>=0.7.1",
     "eth-keys>=0.7.0",
     "eth-utils>=5.2.0",
 ]
+
+[build-system]
+requires = ["setuptools>=65.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+packages = ["pysubnet"]      # 👈 Explicitly mention your top-level package
+
+
+[project.scripts]
+pysubnet = "pysubnet.main:main"

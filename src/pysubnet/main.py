@@ -1,14 +1,15 @@
 import os
 import json
+from pathlib import Path
 from pprint import pprint
 import subprocess
 import time
 import sys
 import shutil
-from accounts import AccountKeyType
-from chainspec_handlers import custom_network_config, enable_poa
-from config import parse_args, Config
-from ethereum import generate_ethereum_keypair
+from .accounts import AccountKeyType
+from .chainspec_handlers import custom_network_config, enable_poa
+from .config import parse_args, Config
+from .ethereum import generate_ethereum_keypair
 
 global INTERACTIVE, RUN_NETWORK, SUBSTRATE, ROOT_DIR, CHAINSPEC, NODES
 
@@ -117,10 +118,8 @@ def generate_keys(account_key_type: AccountKeyType):
         json.dump(NODES, f, indent=4)
 
 
-def insert_keystore(chainspec):
-    """Insert keys into keystore"""
-
-    # Insert keys into keystore
+def insert_keystore(chainspec: str):
+    """Insert AURA + Grandpa private keys into node keystore"""
     for node in NODES:
         # Insert AURA keys
         run_command(
@@ -192,16 +191,16 @@ def setup_dirs():
         node["base_path"] = f"{ROOT_DIR}/{node['name']}"
 
 
-def init_bootnodes_chainspec(chainspec):
-    """Generate a new chainspec and insert bootnodes into it
-    If chainspec file is provided as arg, that's used as template instead of generating a new one.
+def init_bootnodes_chainspec(chainspec: str) -> Path:
+    """Generate a new chainspec @ <ROOT_DIR>/chainspec.json and insert bootnodes into it
+    If chainspec file is provided as arg, that's used as template.
     This function is required to be called before other chainspec editing functions
     to ensure that they work properly with ROOTDIR/chainspec.json
     """
-    c = None
+    c: str = None  # In-memory chainspec buffer
     # Generate initial chainspec
     if chainspec in ["dev", "local"]:  # No explicit file passed
-        print("Generating new local chainspec...")
+        print(f"Generating new {chainspec} chainspec...")
         c = json.loads(
             run_command(
                 [
@@ -214,33 +213,33 @@ def init_bootnodes_chainspec(chainspec):
                 cwd=ROOT_DIR,
             ).stdout
         )
-    elif isinstance(chainspec, str) and os.path.isfile(chainspec):
+    elif os.path.isfile(chainspec):
         try:
             with open(chainspec, "r") as f:
                 c = json.load(f)
-        except json.JSONDecodeError:
+        except json.JSONDecodeError:  # Redundant check, but good practice
             raise ValueError(f"File exists but is not valid JSON: {chainspec}")
     # Set bootnodes
     c["bootNodes"] = [
         f"/ip4/127.0.0.1/tcp/{n['p2p-port']}/p2p/{n['libp2p-public-key']}"
         for n in NODES
     ]
-
-    with open(f"{ROOT_DIR}/chainspec.json", "w") as f:
+    chainspec_path = os.path.join(ROOT_DIR, "chainspec.json")
+    with open(chainspec_path, "w") as f:
         json.dump(c, f, indent=2)
-    print("Chainspec written to", f"{ROOT_DIR}/chainspec.json")
-    return f"{ROOT_DIR}/chainspec.json"
+    print("Chainspec written to", chainspec_path)
+    return chainspec_path
 
 
-def generate_raw_chainspec(chainspec: str) -> str:
+def generate_raw_chainspec(chainspec: Path) -> Path:
     """
     Generates a raw chainspec file and writes it to ROOT_DIR/raw_chainspec.json.
 
     Args:
-        chainspec (str): The chain specification to use (e.g., "dev", "local", filesystem path).
+        chainspec (Path): The chain specification to use. This is the generated chainspec file from `init_bootnodes_chainspec()`
 
     Returns:
-        str: The path to the generated raw chainspec file.
+        Path: The path to the generated raw chainspec file.
     """
     raw_chainspec_path = os.path.join(ROOT_DIR, "raw_chainspec.json")
     try:
@@ -260,17 +259,15 @@ def generate_raw_chainspec(chainspec: str) -> str:
         with open(raw_chainspec_path, "w") as f:
             f.write(result.stdout)
         print(f"Raw chainspec written to {raw_chainspec_path}")
-        config.raw_chainspec = raw_chainspec_path
         return raw_chainspec_path
     except subprocess.CalledProcessError as e:
         raise Exception(f"Failed to generate raw chainspec: {e.stderr}")
 
 
-def start_network(chainspec):
+def start_network(chainspec: str, config: Config):
     print(f"Starting network with {len(NODES)} nodes...")
     # Generate raw chainspec
-    raw_chainspec = generate_raw_chainspec(chainspec)
-
+    config.raw_chainspec = generate_raw_chainspec(chainspec)
     # Start nodes
     node_procs = []
     for i, node in enumerate(NODES):
@@ -280,7 +277,7 @@ def start_network(chainspec):
             "--base-path",
             node["name"],
             "--chain",
-            raw_chainspec,
+            config.raw_chainspec,
             "--port",
             str(node["p2p-port"]),
             "--rpc-port",
@@ -341,7 +338,45 @@ def start_network(chainspec):
         print("All nodes stopped and log files closed.")
 
 
-def main(config: Config):
+def main():
+    config = parse_args()
+    global INTERACTIVE, RUN_NETWORK, ROOT_DIR, SUBSTRATE, CHAINSPEC, NODES
+    INTERACTIVE = config.interactive
+    RUN_NETWORK = config.run_network
+    ROOT_DIR = config.root_dir
+    SUBSTRATE = config.bin
+    CHAINSPEC = config.chainspec
+    NODES = config.nodes
+
+    # Validate root-dir
+    if not os.path.exists(config.root_dir):
+        os.makedirs(config.root_dir, exist_ok=True)
+    if not os.path.isdir(config.root_dir):
+        raise Exception(f"Root path is not a directory: {config.root_dir}")
+
+    # Run clean
+    if config.clean:
+        print(f"Cleaning up {config.root_dir}...")
+        shutil.rmtree(config.root_dir)
+
+    # Validate SUBSTRATE points to a file on the system and is executable
+    if not os.path.isfile(config.bin) or not os.access(config.bin, os.X_OK):
+        raise Exception(f"Substrate binary not found or not executable: {config.bin}")
+
+    # Validate chainspec if it's a valid json file or one of "dev", "local"
+    if os.path.isfile(config.chainspec):
+        try:
+            with open(config.chainspec, "r") as f:
+                json.load(f)
+            CHAINSPEC = os.path.abspath(config.chainspec)
+            config.chainspec = CHAINSPEC
+        except json.JSONDecodeError:
+            raise Exception(f"Chainspec file is not valid JSON: {config.chainspec}")
+    elif config.chainspec in ["dev", "local"]:
+        pass
+    else:
+        raise Exception(f"Invalid chainspec argument: {config.chainspec}")
+
     print(f"Using chainspec -> {CHAINSPEC}")
     print(f"Using substrate binary -> {SUBSTRATE}")
     print(f"Using ROOT_DIR -> {ROOT_DIR}")
@@ -375,49 +410,13 @@ def main(config: Config):
                 input("Start substrate network? (yes/y/yay/no/n): ").strip().lower()
             )
             if proceed in ["y", "yes", "yay"]:
-                start_network(chainspec)
+                start_network(chainspec, config)
             else:
                 print("Aborting network start.")
                 sys.exit(0)
         else:
-            start_network(chainspec)
+            start_network(chainspec, config)
 
 
 if __name__ == "__main__":
-    config = parse_args()
-
-    INTERACTIVE = config.interactive
-    RUN_NETWORK = config.run_network
-    ROOT_DIR = config.root_dir
-    SUBSTRATE = config.bin
-    CHAINSPEC = config.chainspec
-    NODES = config.nodes
-
-    # Validate root-dir
-    if not os.path.exists(config.root_dir):
-        os.makedirs(config.root_dir, exist_ok=True)
-    if not os.path.isdir(config.root_dir):
-        raise Exception(f"Root path is not a directory: {config.root_dir}")
-
-    # Run clean
-    if config.clean:
-        print(f"Cleaning up {config.root_dir}...")
-        shutil.rmtree(config.root_dir)
-
-    # Validate SUBSTRATE points to a file on the system and is executable
-    if not os.path.isfile(config.bin) or not os.access(config.bin, os.X_OK):
-        raise Exception(f"Substrate binary not found or not executable: {config.bin}")
-
-    # Validate chainspec if it's a valid json file or one of "dev", "local"
-    if os.path.isfile(config.chainspec):
-        try:
-            with open(config.chainspec, "r") as f:
-                json.load(f)
-            CHAINSPEC = os.path.abspath(config.chainspec)
-            main(config)
-        except json.JSONDecodeError:
-            raise Exception(f"Chainspec file is not valid JSON: {config.chainspec}")
-    elif config.chainspec in ["dev", "local"]:
-        main(config)
-    else:
-        raise Exception(f"Invalid chainspec argument: {config.chainspec}")
+    main()

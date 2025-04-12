@@ -8,8 +8,8 @@ Then include your handler in the main script before `start_network()` is called
 
 import json
 
-from accounts import AccountKeyType
-from config import Config
+from .accounts import AccountKeyType
+from .config import Config
 
 
 def load_chainspec(chainspec: str):
