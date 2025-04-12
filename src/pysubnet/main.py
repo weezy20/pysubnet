@@ -164,30 +164,29 @@ def insert_keystore(chainspec: str):
 
 
 def setup_dirs():
+    """
+    Should be called before any other function
+    Creates the directory structure for the nodes
+    """
     # Create root-dir, if exists, prompt to clean, otherwise exit program
     os.makedirs(ROOT_DIR, exist_ok=True)
-    if len(os.listdir(ROOT_DIR)) > 0 and INTERACTIVE:
-        clear_root = (
-            input("Root directory is not empty. Clear it out? yes/y/yay/no? ")
-            .lower()
-            .strip()
-        )
-        if clear_root in ["y", "yes", "yay"]:
-            shutil.rmtree(ROOT_DIR)
-            os.makedirs(ROOT_DIR, exist_ok=False)
-        else:
-            print(
-                "Exiting program. Run with `--clean` or `--i` to clear ROOT_DIR -> ",
-                ROOT_DIR,
-            )
-            sys.exit(1)
-
-    elif len(os.listdir(ROOT_DIR)) > 0:
-        raise Exception(
-            "Non-empty <ROOT_DIR>. Using existing non-empty <ROOT_DIR> is unsupported.",
-            "Exiting program. Run with `--clean` or `--i` to clear ROOT_DIR or select a new root directory with --root",
-            ROOT_DIR,
-        )
+    non_empty_exception = Exception(
+        "Non-empty <ROOT_DIR>. Using existing non-empty <ROOT_DIR> is unsupported.",
+        "Exiting program. Run with `--clean` or `--i` to clear ROOT_DIR or select a new root directory with --root",
+        ROOT_DIR,
+    )
+    if len(os.listdir(ROOT_DIR)) > 0: # ROOT_dir is not empty
+        if INTERACTIVE:
+            if prompt_bool(
+                "Root directory is not empty. Clear it out? (yes/y/yay/no)",
+                default=True,
+            ):
+                shutil.rmtree(ROOT_DIR)  # Runs with --clean
+                os.makedirs(ROOT_DIR, exist_ok=True)
+            else:
+                raise non_empty_exception
+        else: # non-interactive mode
+            raise non_empty_exception
     # Create directories
     for node in NODES:
         os.makedirs(f"{ROOT_DIR}/{node['name']}", exist_ok=False)  # Prevent overwrites
@@ -357,14 +356,14 @@ def main():
     if not os.path.isdir(config.root_dir):
         raise Exception(f"Root path is not a directory: {config.root_dir}")
 
-    # Run clean
+    # Run --clean
     if config.clean:
         print(f"Cleaning up {config.root_dir}...")
         shutil.rmtree(config.root_dir)
 
     # Validate SUBSTRATE points to a file on the system and is executable
     if INTERACTIVE:
-        if config.bin is None: # -i without --bin
+        if config.bin is None:  # -i without --bin
             # Prompt user for path to substrate binary
             print(
                 f"Substrate binary not found in cwd or not executable: {config.bin}\n"
@@ -374,9 +373,10 @@ def main():
                 "Path to substrate binary",
                 default="./substrate",
             )
-        else: # -i with --bin
-            SUBSTRATE = os.path.abspath(config.bin)
-    elif not INTERACTIVE and config.bin is None: # neither -i nor --bin, Default to `./substrate`
+        SUBSTRATE = os.path.abspath(config.bin)
+    elif (
+        not INTERACTIVE and config.bin is None
+    ):  # neither -i nor --bin, Default to `./substrate`
         config.bin = os.path.join(os.getcwd(), "substrate")
         SUBSTRATE = os.path.abspath(config.bin)
 
@@ -414,8 +414,10 @@ def main():
     generate_keys(account_key_type=config.account_key_type)
     if INTERACTIVE:
         # Prompt user to proceed with key insertion
-        if not prompt_bool("Keys generated. Proceed to insert? (yes/y/yay/no/n): "):
-            print("Aborting key insertion.")
+        if not prompt_bool(
+            "Keys generated. Proceed to insert? (yes/y/yay/no/n)", default=True
+        ):
+            print("Aborting key insertion and exiting pysubnet.")
             return
         insert_keystore(CHAINSPEC)
     else:
@@ -428,7 +430,8 @@ def main():
         proceed = prompt_bool(
             "Does your node only require Aura/Grandpa authorities (Proof-of-Authority node as in node-template/frontier-template)?\n"
             "Select no if you're using a custom_network_config with pallet-sessions or some other setup\n"
-            "Yes -> enable_poa (standard) | No -> custom_network_config handler() (yes/yay/y/no/n/nay): "
+            "Yes -> enable_poa (standard) | No -> custom_network_config handler() (yes/yay/y/no/n/nay)",
+            default=False,
         )
         if proceed:
             # Compatible with substrate proof-of-authority type setups where session key is (aura, grandpa)
@@ -443,7 +446,7 @@ def main():
 
     if RUN_NETWORK:
         if INTERACTIVE:
-            if prompt_bool("Start substrate network? (yes/y/yay/no/n): "):
+            if prompt_bool("Start substrate network? (yes/y/yay/no/n)", default=True):
                 start_network(chainspec, config)
             else:
                 print("Aborting network start.")

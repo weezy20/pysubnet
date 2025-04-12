@@ -22,7 +22,11 @@ def prompt_bool(prompt_text: str, default: bool = None) -> bool:
     valid_no = {"no", "n", "nay"}
 
     if default is not None:
-        prompt_text += f" [default: {default}]"
+        match default:
+            case True:
+                prompt_text += " [default: Yes] "
+            case False:
+                prompt_text += " [default: No] "
 
     for i in range(TRIES + 1):
         response = input(prompt_text).strip().lower()
@@ -54,12 +58,12 @@ def prompt_path(prompt_text: str, default: str = None) -> Path:
         str: The valid OS path provided by the user, or None if the user provides an invalid path twice.
     """
     if default is not None:
-        prompt_text += f" [default: {default}]"
+        prompt_text += f" [default: {default}] "
 
     for i in range(TRIES + 1):
         response = input(prompt_text).strip()
         if not response and default is not None:
-            return Path(default)
+            response = default
         if os.path.exists(response):  # Check if the path exists on the system
             return Path(response)
         else:
