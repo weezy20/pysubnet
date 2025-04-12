@@ -72,6 +72,10 @@ uv pip install git+https://github.com/weezy20/pysubnet.git
 ```sh
 pysubnet
 ```
+or 
+```sh
+pysubnet -i # Recommended
+```
 
 This uses the default settings:
 - Chainspec: `"dev"`
