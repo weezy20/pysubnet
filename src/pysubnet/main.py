@@ -6,6 +6,8 @@ import subprocess
 import time
 import sys
 import shutil
+
+from .helpers import prompt_bool, prompt_path
 from .accounts import AccountKeyType
 from .chainspec_handlers import custom_network_config, enable_poa
 from .config import parse_args, Config
@@ -399,20 +401,16 @@ def main():
         CHAINSPEC
     )  # Initializes ROOT_DIR/chainspec.json
     if INTERACTIVE and not config.poa:
-        proceed = (
-            input(
-                "Does your node only require Aura/Grandpa authorities (Proof-of-Authority as in node-template/frontier-template)? )?"
-                "Select no if you're using a custom_network_config with pallet-sessions or some other setup "
-                "Yes -> enable_poa (standard) | No -> custom_network_config handler (yes/yay/y/no/n/nay): "
-            )
-            .strip()
-            .lower()
+        proceed = prompt_bool(
+            "Does your node only require Aura/Grandpa authorities (Proof-of-Authority node as in node-template/frontier-template)?\n"
+            "Select no if you're using a custom_network_config with pallet-sessions or some other setup\n"
+            "Yes -> enable_poa (standard) | No -> custom_network_config handler() (yes/yay/y/no/n/nay): "
         )
-        if proceed in ["n", "no", "nay"]:
-            custom_network_config(chainspec, config)
-        elif proceed in ["y", "yes", "yay"]:
+        if proceed:
             # Compatible with substrate proof-of-authority type setups where session key is (aura, grandpa)
             enable_poa(chainspec, config)
+        else:
+            custom_network_config(chainspec, config)
     else:
         if config.poa:
             enable_poa(chainspec, config)
