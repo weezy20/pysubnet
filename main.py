@@ -176,14 +176,14 @@ def setup_dirs():
             os.makedirs(ROOT_DIR, exist_ok=False)
         else:
             print(
-                "Exiting program. Run with `clean` or `i` to clear ROOT_DIR -> ",
+                "Exiting program. Run with `--clean` or `--i` to clear ROOT_DIR -> ",
                 ROOT_DIR,
             )
             sys.exit(1)
 
     elif len(os.listdir(ROOT_DIR)) > 0:
         raise Exception(
-            "Exiting program. Run with `clean` or `i` to clear ROOT_DIR -> ",
+            "Exiting program. Run with `--clean` or `--i` to clear ROOT_DIR -> ",
             ROOT_DIR,
         )
     # Create directories
