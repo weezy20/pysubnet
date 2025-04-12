@@ -398,12 +398,27 @@ def main():
     chainspec = init_bootnodes_chainspec(
         CHAINSPEC
     )  # Initializes ROOT_DIR/chainspec.json
-    if config.poa:
-        # Compatible with substrate proof-of-authority type setups where session key is (aura, grandpa)
-        enable_poa(chainspec, config)
+    if INTERACTIVE:
+        proceed = (
+            input(
+                "Does your node only require Aura/Grandpa authorities (Proof-of-Authority as in node-template/frontier-template)? )?"
+                "Select no if you're using a custom_network_config with pallet-sessions or some other setup "
+                "Yes -> enable_poa (standard) | No -> custom_network_config handler (yes/yay/y/no/n/nay): "
+            )
+            .strip()
+            .lower()
+        )
+        if proceed in ["n", "no", "nay"]:
+            custom_network_config(chainspec, config)
+        elif proceed in ["y", "yes", "yay"]:
+            # Compatible with substrate proof-of-authority type setups where session key is (aura, grandpa)
+            enable_poa(chainspec, config)
     else:
-        # Custom Network Configuration - define your own
-        custom_network_config(chainspec, config)
+        if config.poa:
+            enable_poa(chainspec, config)
+        else:
+            custom_network_config(chainspec, config)
+
     if RUN_NETWORK:
         if INTERACTIVE:
             proceed = (
