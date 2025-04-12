@@ -1,0 +1,52 @@
+import os
+from pathlib import Path
+
+def prompt_bool(prompt_text: str) -> bool:
+    """
+    Prompts the user with a given text and checks if the response is affirmative or negative.
+
+    Args:
+        prompt_text (str): The text to display to the user.
+
+    Returns:
+        bool: True if the user responds with 'yes', 'y', or 'yay' (case insensitive),
+              False if the user responds with 'no', 'n', or 'nay' (case insensitive).
+
+    Raises:
+        ValueError: If the user provides an invalid response.
+    """
+    valid_yes = {"yes", "y", "yay"}
+    valid_no = {"no", "n", "nay"}
+
+    response = input(prompt_text).strip().lower()
+
+    if response in valid_yes:
+        return True
+    elif response in valid_no:
+        return False
+    else:
+        raise ValueError(
+            "Invalid response. Please respond with 'yes', 'y', 'yay', 'no', 'n', or 'nay'."
+        )
+
+
+def prompt_path(prompt_text: str) -> Path:
+    """
+    Prompts the user with a given text and validates if the response is a valid OS path.
+
+    Args:
+        prompt_text (str): The text to display to the user.
+
+    Returns:
+        str: The valid OS path provided by the user, or None if the user provides an invalid path twice.
+    """
+    # Allow the user up to two attempts to provide a valid path
+    for _ in range(2):
+        response = input(prompt_text).strip()
+        if os.path.exists(response):  # Check if the path exists on the system
+            return Path(response)
+        else:
+            print("Invalid path. Please try again.")
+
+    print("You have entered an invalid path twice. Operation aborted.")
+    return None
