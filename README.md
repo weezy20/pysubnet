@@ -1,7 +1,8 @@
 
 ---
 
-# PySubnet
+# PySubnet 
+### Quick & easy mutli-node substrate environment setup
 
 ## 🔧 Description
 
@@ -87,6 +88,14 @@ This uses the default settings:
 - Root directory: `./network`
 - Substrate binary: `./substrate`
 
+You can use all flags with `-i`. The main reason for having flags is to use in non-interactive setups where developers need quick network startup
+A developer might create a substrate node with their custom chainspec edits in the `custom_network_config()` function in [chainspec_handlers.py](./src/pysubnet/chainspec_handlers.py) file and then may run 
+
+```sh
+pysubnet -c # (clean existing root-dir if present) 
+         -r # (invoke start_network())
+         --bin <custom bin> # (provide a custom bin)
+``` 
 ---
 
 ### 🧹 Clean Start
