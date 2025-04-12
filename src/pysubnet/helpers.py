@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-TRIES = 2  # Number of tries before aborting
+TRIES = 2  # Number extra tries before aborting
 
 
 def prompt_bool(prompt_text: str) -> bool:
@@ -21,14 +21,14 @@ def prompt_bool(prompt_text: str) -> bool:
     valid_yes = {"yes", "y", "yay"}
     valid_no = {"no", "n", "nay"}
 
-    response = input(prompt_text).strip().lower()
-    for i in range(TRIES):
+    for i in range(TRIES+1):
+        response = input(prompt_text).strip().lower()
         if response in valid_yes:
             return True
         elif response in valid_no:
             return False
         else:
-            if i == TRIES - 1:
+            if i == TRIES:
                 raise ValueError("Invalid response. Aborting.")
             else:
                 print(
@@ -47,12 +47,12 @@ def prompt_path(prompt_text: str) -> Path:
     Returns:
         str: The valid OS path provided by the user, or None if the user provides an invalid path twice.
     """
-    for i in range(TRIES):
+    for i in range(TRIES+1):
         response = input(prompt_text).strip()
         if os.path.exists(response):  # Check if the path exists on the system
             return Path(response)
         else:
-            if i == TRIES - 1:
+            if i == TRIES:
                 raise ValueError("Invalid response. Aborting")
             else:
                 print("Invalid response. Please respond a valid filesystem path")
