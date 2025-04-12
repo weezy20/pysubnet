@@ -419,10 +419,7 @@ def main():
 
     if RUN_NETWORK:
         if INTERACTIVE:
-            proceed = (
-                input("Start substrate network? (yes/y/yay/no/n): ").strip().lower()
-            )
-            if proceed in ["y", "yes", "yay"]:
+            if prompt_bool("Start substrate network? (yes/y/yay/no/n): "):
                 start_network(chainspec, config)
             else:
                 print("Aborting network start.")
