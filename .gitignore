@@ -13,3 +13,4 @@ substrate*
 pysubnet.json
 chainspec.json
 network/
+*.spec

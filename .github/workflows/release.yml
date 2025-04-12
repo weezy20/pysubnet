@@ -1,0 +1,45 @@
+name: Build and Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.13'
+
+    - name: Install PyInstaller
+      run: pip install pyinstaller
+
+    - name: Build executable
+      run: pyinstaller --onefile main.py --name pysubnet
+
+    - name: Upload release artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: pysubnet
+        path: dist/pysubnet
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Upload release to GitHub
+      uses: ncipollo/release-action@v1
+      with:
+        artifacts: dist/pysubnet
+        token: ${{ secrets.GITHUB_TOKEN }}
+        tag: ${{ github.ref_name }}
+        body: "Release ${{ github.ref_name }} of pysubnet"
+        draft: false
+        prerelease: false
