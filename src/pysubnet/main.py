@@ -398,7 +398,7 @@ def main():
     chainspec = init_bootnodes_chainspec(
         CHAINSPEC
     )  # Initializes ROOT_DIR/chainspec.json
-    if INTERACTIVE:
+    if INTERACTIVE and not config.poa:
         proceed = (
             input(
                 "Does your node only require Aura/Grandpa authorities (Proof-of-Authority as in node-template/frontier-template)? )?"
