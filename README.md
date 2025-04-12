@@ -24,9 +24,14 @@ It also supports key generations for AccountIds using built-in subkey in the sub
 ### 🔌 Using `pip`:
 
 ```sh
+pip install pysubnet
+```
+Or get the latest version from github:
+
+```sh
 pip install git+https://github.com/weezy20/pysubnet.git
 ```
-
+Or run it without installing anything using `pipx` or `uvx`:
 ### ⚡ Using `uv` by [astral.sh](https://docs.astral.sh/uv/) (recommended):
 ```sh
 uvx git+https://github.com/weezy20/pysubnet.git
@@ -40,7 +45,7 @@ python -m venv venv
 source venv/bin/activate 
 # or if using uv
 uv venv test
-source .venv/bin/activate
+source test/.venv/bin/activate
 # Windows: `venv\Scripts\activate`
 ```
 Then install it
@@ -161,9 +166,9 @@ This will:
 
 Or generate keys, insert keys, and launch the network in one step:
 ```sh
-pysubnet -ir -c # interactive
+pysubnet -icr # interactive
 or 
-pysubnet -i -c # non-interactive
+pysubnet -cr # non-interactive
 ```
 It's helpful to use `-c` as often you'll be using the same `<ROOT_DIR>`
 
