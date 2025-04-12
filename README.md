@@ -19,6 +19,28 @@ It also supports key generations for AccountIds using built-in subkey in the sub
 
 ---
 
+## 📦 Installation
+
+### 🔌 Using `pip`:
+
+```sh
+pip install pysubnet
+```
+
+> **Note:** If you're on a system without Python development headers (like `Python.h`), and see errors during install:
+>
+> - On **Debian/Ubuntu**, run: `sudo apt install python3-dev`
+> - On **RedHat/Fedora**, run: `sudo dnf install python3-devel`
+> - On **Mac**, make sure Xcode Command Line Tools are installed: `xcode-select --install`
+
+You can also install directly from GitHub (for the latest version):
+
+```sh
+pip install git+https://github.com/weezy20/pysubnet.git
+```
+
+---
+
 ## 🚀 Usage
 
 ### ✅ Pre-requisites
@@ -31,7 +53,7 @@ It also supports key generations for AccountIds using built-in subkey in the sub
 ### 📦 Basic Command
 
 ```sh
-python main.py
+pysubnet
 ```
 
 This uses the default settings:
@@ -46,9 +68,9 @@ This uses the default settings:
 By default, PySubnet **won’t overwrite an existing root directory** if it has contents. To clear it before launching:
 
 ```sh
-python main.py --clean 
+pysubnet --clean 
 or 
-python main.py -c 
+pysubnet -c 
 ```
 
 ---
@@ -56,7 +78,7 @@ python main.py -c
 ### 📁 Custom Root Directory
 
 ```sh
-python main.py --root ./my_custom_dir
+pysubnet --root ./my_custom_dir
 ```
 
 All generated keys, node information, and chain specs will be stored under this directory, and a `pysubnet.json` file will be generated that holds all keys, ports, flags required to run your network:
@@ -71,16 +93,16 @@ All generated keys, node information, and chain specs will be stored under this 
 Pass in your own chainspec file:
 
 ```sh
-python main.py --chainspec ./my_chainspec.json
+pysubnet --chainspec ./my_chainspec.json
 ```
 
 Or use the default embedded options:
 ```sh
-python main.py --chainspec dev
+pysubnet --chainspec dev
 ```
 or
 ```sh
-python main.py --chainspec local
+pysubnet --chainspec local
 ```
 
 ---
@@ -90,11 +112,11 @@ python main.py --chainspec local
 If you want to manually control the node setup flow (e.g., decide how many nodes to generate, or tweak the keys):
 
 ```sh
-python main.py -i
+pysubnet -i
 ```
 or
 ```sh
-python main.py --interactive
+pysubnet --interactive
 ```
 
 ---
@@ -104,11 +126,11 @@ python main.py --interactive
 After generating keys and chainspecs, you can launch the network:
 
 ```sh
-python main.py --run
+pysubnet --run
 ```
 or
 ```sh
-python main.py -r
+pysubnet -r
 ```
 
 This will:
@@ -118,9 +140,9 @@ This will:
 
 Or generate keys, insert keys, and launch the network in one step:
 ```sh
-python main.py -ir -c # interactive
+pysubnet -ir -c # interactive
 or 
-python main.py -i -c # non-interactive
+pysubnet -i -c # non-interactive
 ```
 It's helpful to use `-c` as often you'll be using the same `<ROOT_DIR>`
 
@@ -131,33 +153,35 @@ It's helpful to use `-c` as often you'll be using the same `<ROOT_DIR>`
 If your Substrate node binary isn't named `substrate`, pass in the path like so:
 
 ```sh
-python main.py --bin ./target/release/my-custom-node
+pysubnet --bin ./target/release/my-custom-node
 ```
 
 ---
+
 ### 🧑‍⚖️ Enable Proof-of-Authority (PoA) Mode
 
 For Substrate-node-template based chains (Simple Aura+Grandpa session keys), you can enable Proof-of-Authority (PoA) mode, which assigns all authorities equal weight in the chainspec and inserts their Aura-SS58 & Grandpa-SS58 keys. This is useful for testing and development purposes when starting out learning substrate. Also works for `frontier/template`
 as it's same in consensus to the default `substrate-node-template`
 
 ```sh
-python main.py --poa -r 
+pysubnet --poa -r 
 # Automates the tutorial "Start a private network with 3 nodes" that used to be in the now gone substrate.io website
 ```
+
 ---
 
 ## 🧾 Full Argument Reference
 
 | Flag | Description | Example |
 |------|-------------|---------|
-| `-i`, `--interactive` | Run in interactive mode | `python main.py -i` |
-| `--run`, `--start`, `-r` | Launch network after key/chainspec generation | `python main.py --run` |
-| `--root` | Set custom root directory for network artifacts | `python main.py --root ./my-net` |
-| `-c`, `--clean` | Clean the root directory before starting | `python main.py -c` |
+| `-i`, `--interactive` | Run in interactive mode | `pysubnet -i` |
+| `--run`, `--start`, `-r` | Launch network after key/chainspec generation | `pysubnet --run` |
+| `--root` | Set custom root directory for network artifacts | `pysubnet --root ./my-net` |
+| `-c`, `--clean` | Clean the root directory before starting | `pysubnet -c` |
 | `--chainspec` | Provide a chainspec file to use as a starter template or use `dev` / `local` | `--chainspec dev` or `--chainspec ./custom.json` |
 | `--bin` | Path to Substrate binary | `--bin ./target/release/node-template` |
 | `--account` | AccountId type to use for ValidatorId, "ecdsa" or "sr25519" | `--account ecdsa` or `--account sr25519"` |
-| `--poa` | Enable POA. Absence of this flag branches code into `custom_network_config` which is user defined | `python main.py --poa --run` |
+| `--poa` | Enable POA. Absence of this flag branches code into `custom_network_config` which is user defined | `pysubnet --poa --run` |
 
 ---
 
