@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 
+
 def prompt_bool(prompt_text: str) -> bool:
     """
     Prompts the user with a given text and checks if the response is affirmative or negative.
@@ -19,15 +20,22 @@ def prompt_bool(prompt_text: str) -> bool:
     valid_no = {"no", "n", "nay"}
 
     response = input(prompt_text).strip().lower()
-
-    if response in valid_yes:
-        return True
-    elif response in valid_no:
-        return False
-    else:
-        raise ValueError(
-            "Invalid response. Please respond with 'yes', 'y', 'yay', 'no', 'n', or 'nay'."
-        )
+    tries = 2
+    for i in range(tries):
+        if response in valid_yes:
+            return True
+        elif response in valid_no:
+            return False
+        else:
+            if i == tries - 1:
+                raise ValueError(
+                    "Invalid response. Please respond with 'yes', 'y', 'yay', 'no', 'n', or 'nay'."
+                )
+            else:
+                print(
+                    "Invalid response. Please respond with 'yes', 'y', 'yay', 'no', 'n', or 'nay'."
+                )
+                continue
 
 
 def prompt_path(prompt_text: str) -> Path:
@@ -41,12 +49,17 @@ def prompt_path(prompt_text: str) -> Path:
         str: The valid OS path provided by the user, or None if the user provides an invalid path twice.
     """
     # Allow the user up to two attempts to provide a valid path
-    for _ in range(2):
+    tries = 2
+    for i in range(tries):
         response = input(prompt_text).strip()
         if os.path.exists(response):  # Check if the path exists on the system
             return Path(response)
         else:
-            print("Invalid path. Please try again.")
+            if i == tries - 1:
+                raise ValueError("Invalid response. Aborting")
+            else:
+                print("Invalid response. Please respond a valid filesystem path")
+                continue
 
     print("You have entered an invalid path twice. Operation aborted.")
     return None

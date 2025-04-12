@@ -24,7 +24,7 @@ It also supports key generations for AccountIds using built-in subkey in the sub
 ### 🔌 Using `pip`:
 
 ```sh
-pip install pysubnet
+pip install pysubnet # (Coming soon)
 ```
 Or get the latest version from github:
 
