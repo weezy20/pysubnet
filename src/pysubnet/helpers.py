@@ -21,7 +21,7 @@ def prompt_bool(prompt_text: str) -> bool:
     valid_yes = {"yes", "y", "yay"}
     valid_no = {"no", "n", "nay"}
 
-    for i in range(TRIES+1):
+    for i in range(TRIES + 1):
         response = input(prompt_text).strip().lower()
         if response in valid_yes:
             return True
@@ -47,7 +47,7 @@ def prompt_path(prompt_text: str) -> Path:
     Returns:
         str: The valid OS path provided by the user, or None if the user provides an invalid path twice.
     """
-    for i in range(TRIES+1):
+    for i in range(TRIES + 1):
         response = input(prompt_text).strip()
         if os.path.exists(response):  # Check if the path exists on the system
             return Path(response)

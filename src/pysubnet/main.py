@@ -184,7 +184,8 @@ def setup_dirs():
 
     elif len(os.listdir(ROOT_DIR)) > 0:
         raise Exception(
-            "Exiting program. Run with `--clean` or `--i` to clear ROOT_DIR -> ",
+            "Non-empty <ROOT_DIR>. Using existing non-empty <ROOT_DIR> is unsupported.",
+            "Exiting program. Run with `--clean` or `--i` to clear ROOT_DIR or select a new root directory with --root",
             ROOT_DIR,
         )
     # Create directories
@@ -388,12 +389,10 @@ def main():
     generate_keys(account_key_type=config.account_key_type)
     if INTERACTIVE:
         # Prompt user to proceed with key insertion
-        proceed = input("Keys generated. Proceed to insert? (yes/no): ").strip().lower()
-        if proceed in ["n", "no", "nay"]:
+        if not prompt_bool("Keys generated. Proceed to insert? (yes/y/yay/no/n): "):
             print("Aborting key insertion.")
             return
-        elif proceed in ["y", "yes", "yay"]:
-            insert_keystore(CHAINSPEC)
+        insert_keystore(CHAINSPEC)
     else:
         insert_keystore(CHAINSPEC)
     # Modified chainspec with bootnodes inserted
