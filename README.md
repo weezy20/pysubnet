@@ -27,6 +27,11 @@ It also supports key generations for AccountIds using built-in subkey in the sub
 pip install pysubnet
 ```
 
+### Using `uv` by astral.sh:
+```sh
+uvx git+https://github.com/weezy20/pysubnet.git
+```
+
 > **Note:** If you're on a system without Python development headers (like `Python.h`), and see errors during install:
 >
 > - On **Debian/Ubuntu**, run: `sudo apt install python3-dev`
