@@ -24,25 +24,37 @@ It also supports key generations for AccountIds using built-in subkey in the sub
 ### 🔌 Using `pip`:
 
 ```sh
-pip install pysubnet
+pip install git+https://github.com/weezy20/pysubnet.git
 ```
 
-### Using `uv` by astral.sh:
+### ⚡ Using `uv` by [astral.sh](https://docs.astral.sh/uv/) (recommended):
 ```sh
 uvx git+https://github.com/weezy20/pysubnet.git
 ```
 
-> **Note:** If you're on a system without Python development headers (like `Python.h`), and see errors during install:
+Or create a virutalenv with `python >=3.10` and install it inside it using pip, uv, etc.
+
+```sh
+# Create virtualenv with python >=3.10
+python -m venv venv
+source venv/bin/activate 
+# or if using uv
+uv venv test
+source .venv/bin/activate
+# Windows: `venv\Scripts\activate`
+```
+Then install it
+```sh
+pip install git+https://github.com/weezy20/pysubnet.git
+# or if using uv
+uv pip install git+https://github.com/weezy20/pysubnet.git
+```
+
+> **Note:** If you're on a system without Python development headers (like `Python.h`), and see missing header errors during install you would need to install them:
 >
 > - On **Debian/Ubuntu**, run: `sudo apt install python3-dev`
 > - On **RedHat/Fedora**, run: `sudo dnf install python3-devel`
 > - On **Mac**, make sure Xcode Command Line Tools are installed: `xcode-select --install`
-
-You can also install directly from GitHub (for the latest version):
-
-```sh
-pip install git+https://github.com/weezy20/pysubnet.git
-```
 
 ---
 
