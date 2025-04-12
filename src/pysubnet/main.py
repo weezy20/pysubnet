@@ -7,38 +7,13 @@ import time
 import sys
 import shutil
 
-from .helpers import prompt_bool, prompt_path
+from .helpers import prompt_bool, prompt_path, run_command, parse_subkey_output
 from .accounts import AccountKeyType
 from .chainspec_handlers import custom_network_config, enable_poa
 from .config import parse_args, Config
 from .ethereum import generate_ethereum_keypair
 
 global INTERACTIVE, RUN_NETWORK, SUBSTRATE, ROOT_DIR, CHAINSPEC, NODES
-
-
-def run_command(command, cwd=None):
-    """
-    Runs a command in a given directory
-    """
-    result = subprocess.run(command, capture_output=True, text=True, cwd=cwd)
-    if result.returncode != 0:
-        raise Exception(f"Command failed: {' '.join(command)}\n{result.stderr}")
-    return result
-
-
-def parse_subkey_output(output):
-    """Parses subkey output"""
-    return {
-        "secret_phrase": " ".join(
-            output.split("Secret phrase:")[1].split()[:12]
-        ).strip()
-        if "Secret phrase:" in output
-        else None,
-        "secret": output.split("Secret seed:")[1].split()[0].strip(),
-        "public_key": output.split("Public key (hex):")[1].split()[0].strip(),
-        "ss58_address": output.split("Public key (SS58):")[1].split()[0].strip(),
-        "account_id": output.split("Account ID:")[1].split()[0].strip(),
-    }
 
 
 def generate_keys(account_key_type: AccountKeyType):
@@ -175,7 +150,7 @@ def setup_dirs():
         "Exiting program. Run with `--clean` or `--i` to clear ROOT_DIR or select a new root directory with --root",
         ROOT_DIR,
     )
-    if len(os.listdir(ROOT_DIR)) > 0: # ROOT_dir is not empty
+    if len(os.listdir(ROOT_DIR)) > 0:  # ROOT_dir is not empty
         if INTERACTIVE:
             if prompt_bool(
                 "Root directory is not empty. Clear it out? (yes/y/yay/no)",
@@ -185,7 +160,7 @@ def setup_dirs():
                 os.makedirs(ROOT_DIR, exist_ok=True)
             else:
                 raise non_empty_exception
-        else: # non-interactive mode
+        else:  # non-interactive mode
             raise non_empty_exception
     # Create directories
     for node in NODES:
