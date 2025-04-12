@@ -4,7 +4,7 @@ from pathlib import Path
 TRIES = 2  # Number extra tries before aborting
 
 
-def prompt_bool(prompt_text: str) -> bool:
+def prompt_bool(prompt_text: str, default: bool = None) -> bool:
     """
     Prompts the user with a given text and checks if the response is affirmative or negative.
 
@@ -21,8 +21,14 @@ def prompt_bool(prompt_text: str) -> bool:
     valid_yes = {"yes", "y", "yay"}
     valid_no = {"no", "n", "nay"}
 
+    if default is not None:
+        prompt_text += f" [default: {default}]"
+
     for i in range(TRIES + 1):
         response = input(prompt_text).strip().lower()
+        # False/True is not None, Empty response is False, hence not "" == True
+        if not response and default is not None:
+            return default
         if response in valid_yes:
             return True
         elif response in valid_no:
@@ -37,7 +43,7 @@ def prompt_bool(prompt_text: str) -> bool:
                 continue
 
 
-def prompt_path(prompt_text: str) -> Path:
+def prompt_path(prompt_text: str, default: str = None) -> Path:
     """
     Prompts the user with a given text and validates if the response is a valid OS path.
 
@@ -47,15 +53,22 @@ def prompt_path(prompt_text: str) -> Path:
     Returns:
         str: The valid OS path provided by the user, or None if the user provides an invalid path twice.
     """
+    if default is not None:
+        prompt_text += f" [default: {default}]"
+
     for i in range(TRIES + 1):
         response = input(prompt_text).strip()
+        if not response and default is not None:
+            return Path(default)
         if os.path.exists(response):  # Check if the path exists on the system
             return Path(response)
         else:
             if i == TRIES:
                 raise ValueError("Invalid response. Aborting")
             else:
-                print("Invalid response. Please respond a valid filesystem path")
+                print(
+                    f"{response} doesn't exist. Please respond a valid filesystem path"
+                )
                 continue
 
     print("You have entered an invalid path twice. Operation aborted.")

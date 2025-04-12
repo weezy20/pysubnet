@@ -363,8 +363,33 @@ def main():
         shutil.rmtree(config.root_dir)
 
     # Validate SUBSTRATE points to a file on the system and is executable
+    if INTERACTIVE:
+        if config.bin is None: # -i without --bin
+            # Prompt user for path to substrate binary
+            print(
+                f"Substrate binary not found in cwd or not executable: {config.bin}\n"
+                "Please provide the path to the substrate binary:"
+            )
+            config.bin = prompt_path(
+                "Path to substrate binary",
+                default="./substrate",
+            )
+        else: # -i with --bin
+            SUBSTRATE = os.path.abspath(config.bin)
+    elif not INTERACTIVE and config.bin is None: # neither -i nor --bin, Default to `./substrate`
+        config.bin = os.path.join(os.getcwd(), "substrate")
+        SUBSTRATE = os.path.abspath(config.bin)
+
+    # Validate SUBSTRATE
     if not os.path.isfile(config.bin) or not os.access(config.bin, os.X_OK):
-        raise Exception(f"Substrate binary not found or not executable: {config.bin}")
+        raise Exception(
+            f"Substrate binary not found or not executable: {config.bin}\n"
+            "Potential Solutions:\n"
+            '1. Check if a substrate bin named "substrate" is present in cwdpath.\n'
+            "2. Ensure the file is executable.\n"
+            "3. Provide --bin <path/to/your/node> to specify a different binary. Such as --bin ./target/release/substrate-node-template\n"
+            "4. Use -i to select a binary interactively.\n"
+        )
 
     # Validate chainspec if it's a valid json file or one of "dev", "local"
     if os.path.isfile(config.chainspec):
