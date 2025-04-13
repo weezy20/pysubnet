@@ -11,6 +11,7 @@ dependencies = [
     "eth-hash[pysha3]>=0.7.1",
     "eth-keys>=0.7.0",
     "eth-utils>=5.2.0",
+    "tomli>=2.2.1",
 ]
 
 classifiers = [

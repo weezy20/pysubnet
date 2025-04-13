@@ -4,6 +4,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Dict
 
+from .helpers import load_nodes_from_file
+
 from .accounts import AccountKeyType
 
 
