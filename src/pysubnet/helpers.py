@@ -80,6 +80,34 @@ def prompt_path(prompt_text: str, default: str = None) -> Path:
     return None
 
 
+def prompt_str(prompt_text: str, default: str = None) -> str:
+    """
+    Prompts the user with a given text.
+
+    Args:
+        prompt_text (str): The text to display to the user.
+
+    Returns:
+        str: User input
+    """
+    if default is not None:
+        prompt_text += f" [default: {default}] "
+    else:
+        prompt_text += ": "
+
+    response = input(prompt_text).strip()
+    for i in range(TRIES + 1):
+        if not response and default is not None:
+            return default
+        elif response:
+            return response
+        else:
+            if i == TRIES:
+                raise ValueError("Empty response. Aborting.")
+            print("Invalid response. Please provide a non-empty input.")
+            response = input(prompt_text).strip()
+
+
 def run_command(command, cwd=None):
     """
     Runs a command in a given directory

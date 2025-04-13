@@ -7,7 +7,13 @@ import time
 import sys
 import shutil
 
-from .helpers import prompt_bool, prompt_path, run_command, parse_subkey_output
+from .helpers import (
+    prompt_bool,
+    prompt_path,
+    run_command,
+    parse_subkey_output,
+    prompt_str,
+)
 from .accounts import AccountKeyType
 from .chainspec_handlers import custom_network_config, enable_poa
 from .config import parse_args, Config
@@ -379,9 +385,22 @@ def main():
     else:
         raise Exception(f"Invalid chainspec argument: {config.chainspec}")
 
+    # Interactive mode for account type
+    match (config.account_key_type, INTERACTIVE):
+        case (None, True): # no --account and -i
+            config.account_key_type = AccountKeyType.from_string(prompt_str(
+                "Select account key type (ecdsa, sr25519)", default="sr25519"
+            ))
+        case (account, _): # --account specified, skip prompt
+            # Validation is taken care of by argparse itself
+            config.account_key_type = account
+        case (None, False): # non-interactive mode without --account, default to ecdsa
+            config.account_key_type = AccountKeyType.AccountId20
+
     print(f"Using chainspec        -> [{CHAINSPEC}]")
     print(f"Using substrate binary -> [{SUBSTRATE}]")
     print(f"Using ROOT_DIR         -> [{ROOT_DIR}]")
+    print(f"Using AccountKeyType   -> [{config.account_key_type.value}]")
     # Setup directory tree for NODEs
     setup_dirs()
     # Generate keys and setup nodes
@@ -400,7 +419,7 @@ def main():
     chainspec = init_bootnodes_chainspec(
         CHAINSPEC
     )  # Initializes ROOT_DIR/chainspec.json
-        # Generate raw chainspec
+    # Generate raw chainspec
     config.raw_chainspec = generate_raw_chainspec(chainspec)
     if INTERACTIVE and not config.poa:
         proceed = prompt_bool(

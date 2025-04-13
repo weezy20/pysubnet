@@ -217,6 +217,7 @@ pysubnet --poa -r
 - All node data (crypto keys, Account keys, libp2p keys, node IDs) is stored in `pysubnet.json`.
 - The script auto-generates keystores compatible with Substrate’s expected format.
 - You can choose between `AccountId20` or `AccountId32` for your AccountId (validator account keys)
+- Make sure your node uses the same account type as the `--account` you pass to pysubnet. Not doing so will result in a runtime error
 - Chainspecs are automatically modified in-place with new authority and bootnodes + libp2p identity. All editors are defined in [chainspec_handlers.py](./src/pysubnet/chainspec_handlers.py) and inserted before `start_network()` call.
 - Do not pass `-r` if you just want to prepare base-paths for a multi-node network.
 - Sometimes CTRL-C might give you an error. This is because we use a sleep timer for 2 seconds in `main.py` to reduce CPU interuppts. This is easily fixed by tapping CTRL-C in succession.

@@ -3,10 +3,11 @@ from enum import Enum
 
 
 class AccountKeyType(Enum):
-    AccountId32 = (
-        "sr25519"  # Uses substrate node's built in subkey to generate AccountID keys
-    )
+    AccountId32 = "sr25519"  # Default substrate crypto
     AccountId20 = "ecdsa"  # Uses ethereum keys
+
+    def __str__(self):
+        return self.value  # Display "sr25519" instead of "AccountKeyType.AccountId32"
 
     # Make the enum case-insensitive for command line input
     @classmethod
