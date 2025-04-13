@@ -25,7 +25,7 @@ def generate_keys(account_key_type: AccountKeyType):
     - Generates validator account keys based on `account_type`
     """
     for node in NODES:
-        print(f"Setting up {node['name']}...")
+        print(f"Setting up {node['name']} @ {node['base_path']}...")
         # Generate node key and peer ID
         result = run_command(
             [
@@ -47,7 +47,7 @@ def generate_keys(account_key_type: AccountKeyType):
         # Generate Aura keys (Sr25519)
         aura_result = run_command([SUBSTRATE, "key", "generate", "--scheme", "Sr25519"])
         aura = parse_subkey_output(aura_result.stdout)
-        print("\tAura public key:", aura["public_key"], "\n")
+        print("\tAura public key (ss58):", aura["ss58_address"], "\n")
         node["aura-public-key"] = aura["public_key"]
         node["aura-private-key"] = aura["secret"]
         node["aura-secret-phrase"] = aura["secret_phrase"]
@@ -58,7 +58,7 @@ def generate_keys(account_key_type: AccountKeyType):
             [SUBSTRATE, "key", "generate", "--scheme", "Ed25519"]
         )
         grandpa = parse_subkey_output(grandpa_result.stdout)
-        print("\tGrandpa public key:", grandpa["public_key"], "\n")
+        print("\tGrandpa public key (ss58):", grandpa["ss58_address"], "\n")
         node["grandpa-public-key"] = grandpa["public_key"]
         node["grandpa-private-key"] = grandpa["secret"]
         node["grandpa-secret-phrase"] = grandpa["secret_phrase"]
@@ -90,7 +90,8 @@ def generate_keys(account_key_type: AccountKeyType):
                 )
         # pprint(node)
     # Write node configuration to a JSON file
-    print("Saving network contents to -> ", f"{ROOT_DIR}/pysubnet.json")
+    with open(os.path.join(ROOT_DIR, "pysubnet.json"), "w") as f:
+        json.dump(NODES, f, indent=4)
     with open(f"{ROOT_DIR}/pysubnet.json", "w") as f:
         json.dump(NODES, f, indent=4)
 
@@ -204,7 +205,7 @@ def init_bootnodes_chainspec(chainspec: str) -> Path:
     chainspec_path = os.path.join(ROOT_DIR, "chainspec.json")
     with open(chainspec_path, "w") as f:
         json.dump(c, f, indent=2)
-    print("Chainspec written to", chainspec_path)
+    print(f"Chainspec written to      -> [{chainspec_path}]")
     return chainspec_path
 
 
@@ -235,16 +236,14 @@ def generate_raw_chainspec(chainspec: Path) -> Path:
         )
         with open(raw_chainspec_path, "w") as f:
             f.write(result.stdout)
-        print(f"Raw chainspec written to {raw_chainspec_path}")
+        print(f"Raw chainspec written to  -> [{raw_chainspec_path}]")
         return raw_chainspec_path
     except subprocess.CalledProcessError as e:
         raise Exception(f"Failed to generate raw chainspec: {e.stderr}")
 
 
-def start_network(chainspec: str, config: Config):
+def start_network(config: Config):
     print(f"Starting network with {len(NODES)} nodes...")
-    # Generate raw chainspec
-    config.raw_chainspec = generate_raw_chainspec(chainspec)
     # Start nodes
     node_procs = []
     for i, node in enumerate(NODES):
@@ -380,9 +379,9 @@ def main():
     else:
         raise Exception(f"Invalid chainspec argument: {config.chainspec}")
 
-    print(f"Using chainspec -> {CHAINSPEC}")
-    print(f"Using substrate binary -> {SUBSTRATE}")
-    print(f"Using ROOT_DIR -> {ROOT_DIR}")
+    print(f"Using chainspec        -> [{CHAINSPEC}]")
+    print(f"Using substrate binary -> [{SUBSTRATE}]")
+    print(f"Using ROOT_DIR         -> [{ROOT_DIR}]")
     # Setup directory tree for NODEs
     setup_dirs()
     # Generate keys and setup nodes
@@ -401,6 +400,8 @@ def main():
     chainspec = init_bootnodes_chainspec(
         CHAINSPEC
     )  # Initializes ROOT_DIR/chainspec.json
+        # Generate raw chainspec
+    config.raw_chainspec = generate_raw_chainspec(chainspec)
     if INTERACTIVE and not config.poa:
         proceed = prompt_bool(
             "Does your node only require Aura/Grandpa authorities (Proof-of-Authority node as in node-template/frontier-template)?\n"
@@ -422,12 +423,12 @@ def main():
     if RUN_NETWORK:
         if INTERACTIVE:
             if prompt_bool("Start substrate network? (yes/y/yay/no/n)", default=True):
-                start_network(chainspec, config)
+                start_network(config)
             else:
                 print("Aborting network start.")
                 sys.exit(0)
         else:
-            start_network(chainspec, config)
+            start_network(config)
 
 
 if __name__ == "__main__":
