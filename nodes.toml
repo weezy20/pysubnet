@@ -1,9 +1,18 @@
 [network]
 name = "testnet"
 chain = "local"      # --chainspec takes preference over this
-chain-id = 1234      # if you want to  specify a chain-id use this
 token-symbol = "TST" # customizations such as this don't take effect if you use --chainspec
-token-decimal = 12  
+token-decimal = 12 
+
+[frontier] # Use if your node is frontier based
+evm-balances = [
+    {"0xff64d3f6efe2317ee2807d223a0bdc4c0c49dfdb" = 1000},
+    {"0x8c77e89f04c0b69d89519b3db28cb0b040a7777" = 2000},
+    {"0x7a77e89f04c0b69d89519b3db28cb0b040a7777" = 3000}
+
+]
+evm-chain-id = 1234
+
 
 [[nodes]]
 name = "elizabeth"

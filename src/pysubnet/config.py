@@ -121,6 +121,5 @@ def parse_args() -> Config:
     # for others it its a very annoying runtime error! Hence use + <default value> unless a default is provided
     # in argsparse itself. We explicitly specify defaults for argparse itself so `or <default_val>` not required here
     if args.config_file is not None:
-        nodes = load_nodes_from_file(args.config_file)
-
+        config.nodes = load_nodes_from_file(args.config_file)
     return config

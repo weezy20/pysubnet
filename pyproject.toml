@@ -1,6 +1,6 @@
 [project]
 name = "pysubnet"
-version = "1.1.1"
+version = "1.2"
 description = "Deploy a substrate permissioned network using python"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -11,6 +11,7 @@ dependencies = [
     "eth-hash[pysha3]>=0.7.1",
     "eth-keys>=0.7.0",
     "eth-utils>=5.2.0",
+    "pydantic>=2.11.3",
     "tomli>=2.2.1",
 ]
 
