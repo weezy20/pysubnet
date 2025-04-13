@@ -133,12 +133,14 @@ pysubnet --chainspec ./my_chainspec.json
 
 Or use the default embedded options:
 ```sh
-pysubnet --chainspec dev
+pysubnet --chainspec dev # default option equivalent to running without --chainspec flag
+
 ```
 or
 ```sh
 pysubnet --chainspec local
 ```
+`PySubnet` will inject generated bootnodes into the chainspec, and based on one of `custom_network_config()` [Default] or `enable_poa()`[`--poa`] will inject authorities to the genesis. It will then generate a raw_chainspec file and use that to spawn of  the network in `start_network()`
 
 ---
 
@@ -156,24 +158,13 @@ pysubnet --interactive
 
 ---
 
-### 🔌 Run a Local Network
+`-r` or `--run` will invoke `start_network()` to start the network. This will:
 
-After generating keys and chainspecs, you can launch the network:
-
-```sh
-pysubnet --run
-```
-or
-```sh
-pysubnet -r
-```
-
-This will:
 - Spawn each node in a separate process.
 - Use the generated keystores and updated chainspec.
 - Write logs to <node-name>.log located inside each node's directory.
 
-Or generate keys, insert keys, and launch the network in one step:
+Generate keys, insert keys, update chainspec, generate raw chainspec and launch the network in one step:
 ```sh
 pysubnet -icr # interactive
 or 
@@ -195,7 +186,8 @@ pysubnet --bin ./target/release/my-custom-node
 
 ### 🧑‍⚖️ Enable Proof-of-Authority (PoA) Mode
 
-For Substrate-node-template based chains (Simple Aura+Grandpa session keys), you can enable Proof-of-Authority (PoA) mode, which assigns all authorities equal weight in the chainspec and inserts their Aura-SS58 & Grandpa-SS58 keys. This is useful for testing and development purposes when starting out learning substrate. Also works for `frontier/template`
+For Substrate-node-template based chains (Simple Aura+Grandpa session keys), you can enable Proof-of-Authority (PoA) mode, which assigns all authorities equal weight in the chainspec and inserts their Aura-SS58 & Grandpa-SS58 keys. This is useful for testing and development purposes when starting out learning substrate. Also works for `frontier/template` or any node that has a "aura" and "grandpa" in their runtime-genesis["patch"] section.
+]
 as it's same in consensus to the default `substrate-node-template`
 
 ```sh
