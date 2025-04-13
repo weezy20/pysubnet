@@ -2,7 +2,7 @@
 ---
 
 # PySubnet 
-### Quick & easy mutli-node substrate environment setup
+### Quick & easy mutli-node substrate network setup
 
 ## 🔧 Description
 
@@ -67,9 +67,11 @@ uv pip install git+https://github.com/weezy20/pysubnet.git
 ## 🚀 Usage
 
 ### ✅ Pre-requisites
+- **Substrate Binary** (required):  
+    A compiled Substrate binary. By default, pysubnet looks for a binary named `substrate`. If your binary has a different name or is located elsewhere, you can specify its path using the `--bin` flag.
 
-- A compiled **Substrate binary**. Default name expected is `substrate`, but you can pass a custom path using the `--bin` flag.
-- A **chainspec**, or use the default `"dev"` or `"local"` ones to bootstrap.
+- **Chainspec File** (optional):  
+    A `chainspec.json` file can be provided as a base template for your network configuration.
 
 ---
 
@@ -144,25 +146,11 @@ pysubnet --chainspec local
 
 ---
 
-### 🧑‍💻 Interactive Mode
-
-If you want to manually control the node setup flow (e.g., decide how many nodes to generate, or tweak the keys):
-
-```sh
-pysubnet -i
-```
-or
-```sh
-pysubnet --interactive
-```
-
----
-
 `-r` or `--run` will invoke `start_network()` to start the network. This will:
 
 - Spawn each node in a separate process.
 - Use the generated keystores and updated chainspec.
-- Write logs to <node-name>.log located inside each node's directory.
+- Write logs to `<node-name>.log` located inside each node's directory.
 
 Generate keys, insert keys, update chainspec, generate raw chainspec and launch the network in one step:
 ```sh
@@ -171,16 +159,6 @@ or
 pysubnet -cr # non-interactive
 ```
 It's helpful to use `-c` as often you'll be using the same `<ROOT_DIR>`
-
----
-
-### 🛠️ Custom Substrate Binary
-
-If your Substrate node binary isn't named `substrate`, pass in the path like so:
-
-```sh
-pysubnet --bin ./target/release/my-custom-node
-```
 
 ---
 
