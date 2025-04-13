@@ -387,15 +387,19 @@ def main():
 
     # Interactive mode for account type
     match (config.account_key_type, INTERACTIVE):
-        case (None, True): # no --account and -i
-            config.account_key_type = AccountKeyType.from_string(prompt_str(
-                "Select account key type (ecdsa, sr25519)", default="sr25519"
-            ))
-        case (account, _): # --account specified, skip prompt
+        case (None, True):  # no --account and -i
+            config.account_key_type = AccountKeyType.from_string(
+                prompt_str(
+                    "Select account key type (ecdsa, sr25519)", default="sr25519"
+                )
+            )
+        case (None, False):  # non-interactive mode without --account, default to ecdsa
+            config.account_key_type = AccountKeyType.AccountId20
+        case (account, _) if account is not None:  # --account specified, skip prompt
             # Validation is taken care of by argparse itself
             config.account_key_type = account
-        case (None, False): # non-interactive mode without --account, default to ecdsa
-            config.account_key_type = AccountKeyType.AccountId20
+        case _:  # Unreachable
+            pass
 
     print(f"Using chainspec        -> [{CHAINSPEC}]")
     print(f"Using substrate binary -> [{SUBSTRATE}]")
