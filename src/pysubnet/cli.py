@@ -106,7 +106,9 @@ def parse_args() -> CliConfig:
         default=False,
         help="Enable Substrate-node-template PoA mode, i.e. assign all authorities equal weight in chainspec",
     )
-
+    # !! WARNING: argsparse will actually set non-supplied flags to None! This works for boolean values but
+    # for others it can lead to uncaught bugs! Hence use + <default value> unless a default is provided
+    # in argsparse itself. We explicitly specify defaults for argparse itself so `or <default_val>` not required here
     args = parser.parse_args()
 
     config = CliConfig(
@@ -119,9 +121,7 @@ def parse_args() -> CliConfig:
         account_key_type=args.account,
         poa=args.poa,
     )
-    # !! WARNING: argsparse will actually set non-supplied flags to None! This works for boolean values but
-    # for others it its a very annoying runtime error! Hence use + <default value> unless a default is provided
-    # in argsparse itself. We explicitly specify defaults for argparse itself so `or <default_val>` not required here
+
     if args.config_file is not None:
         pysubnetConfig = load_config(args.config_file)
         config.nodes = load_nodes_from_config(pysubnetConfig)
@@ -132,7 +132,13 @@ def parse_args() -> CliConfig:
     if args.chainspec is not None:
         config.chainspec = args.chainspec
         config.apply_chainspec_customizations = False
+    else:
+        # Use loaded `chain` from config.network otherwise we fallback to "dev"
+        config.chainspec = (
+            config.network.chain if config.network and config.network.chain else "dev"
+        )
     return config
+
 
 if __name__ == "__main__":
     config = parse_args()

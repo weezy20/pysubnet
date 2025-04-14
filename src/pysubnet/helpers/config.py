@@ -1,6 +1,6 @@
 from pathlib import Path
 from pprint import pprint
-from typing import List, Optional
+from typing import Dict, List, Optional
 from pydantic import BaseModel, Field
 import json
 import pydantic
@@ -14,9 +14,10 @@ class NetworkConfig(BaseModel):
     """
 
     name: str
+    """The name of the network"""
     chain: str
     chain_id: str = Field(..., alias="chain-id")
-    token_symbol: str = Field(..., alias="token-symbol")
+    token_symbol: str = Field(..., alias="token-symbol", min_length=1, max_length=12)
     token_decimal: int = Field(..., alias="token-decimal")
 
 
@@ -26,9 +27,16 @@ class NodeConfig(BaseModel):
     """
 
     name: str
-    rpc_port: int = Field(..., alias="rpc-port", ge=1, le=65535)
-    prometheus_port: int = Field(..., alias="prometheus-port", ge=1, le=65535)
-    p2p_port: int = Field(..., alias="p2p-port", ge=1, le=65535)
+    """The name of the node."""
+
+    rpc_port: int = Field(..., alias="rpc-port", ge=1024, le=49151)
+    """The RPC port for the node, used for client communication. Must be between 1024 and 49151."""
+
+    prometheus_port: int = Field(..., alias="prometheus-port", ge=1024, le=49151)
+    """The Prometheus port for the node, used for metrics monitoring. Must be between 1024 and 49151."""
+
+    p2p_port: int = Field(..., alias="p2p-port", ge=1024, le=49151)
+    """The P2P port for the node, used for peer-to-peer communication. Must be between 1024 and 49151."""
     # Final balance is this multiplied by 10^token_decimal
     balance: Optional[int] = 0
 
@@ -85,7 +93,7 @@ def load_config(config_file_path: Path) -> PySubnetConfig:
     return PySubnetConfig.model_validate(raw_data)
 
 
-def load_nodes_from_config(pysubnet_config: PySubnetConfig) -> List[NodeConfig]:
+def load_nodes_from_config(pysubnet_config: PySubnetConfig) -> List[Dict]:
     """
     Load nodes from a PySubnetConfig object. Makes sure len(nodes) > 0
     Args:
@@ -97,7 +105,7 @@ def load_nodes_from_config(pysubnet_config: PySubnetConfig) -> List[NodeConfig]:
     """
     if not pysubnet_config.nodes:
         raise ValueError("Cannot start network with zero nodes")
-    return pysubnet_config.nodes
+    return [node.model_dump(by_alias=True) for node in pysubnet_config.nodes]
 
 
 if __name__ == "__main__":

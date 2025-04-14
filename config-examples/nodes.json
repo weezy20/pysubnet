@@ -11,7 +11,7 @@
             "name": "elizabeth",
             "p2p-port": 30333,
             "rpc-port": 9943,
-            "prometheus-port": 961,
+            "prometheus-port": 9615,
             "balance": 4000
         },
         {
