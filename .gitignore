@@ -14,5 +14,5 @@ pysubnet.json
 chainspec.json
 network/
 *.spec
-
+*.json
 *.exe
