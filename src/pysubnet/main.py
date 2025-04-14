@@ -16,7 +16,7 @@ from .helpers import (
 )
 from .accounts import AccountKeyType
 from .chainspec_handlers import custom_network_config, enable_poa
-from .config import parse_args, Config
+from .cli import parse_args, CliConfig
 from .ethereum import generate_ethereum_keypair
 
 global INTERACTIVE, RUN_NETWORK, SUBSTRATE, ROOT_DIR, CHAINSPEC, NODES
@@ -248,7 +248,7 @@ def generate_raw_chainspec(chainspec: Path) -> Path:
         raise Exception(f"Failed to generate raw chainspec: {e.stderr}")
 
 
-def start_network(config: Config):
+def start_network(config: CliConfig):
     print(f"Starting network with {len(NODES)} nodes...")
     # Start nodes
     node_procs = []
