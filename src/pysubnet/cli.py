@@ -135,7 +135,7 @@ def parse_args() -> CliConfig:
     else:
         # Use loaded `chain` from config.network otherwise we fallback to "dev"
         config.chainspec = (
-            config.network.chain if config.network and config.network.chain else "dev"
+            config.network.chain_id if config.network and config.network.chain_id else "dev"
         )
     return config
 

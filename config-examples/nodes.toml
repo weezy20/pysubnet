@@ -1,9 +1,7 @@
 [network]
-name = "My Pysubnet Testnet" # Network name
-chain = "local"      # --chainspec takes preference over this, use to generate chainspec template and will be passed to build-spec --chain <chain>
+chain-id = "local"      # --chainspec takes preference over this, use to generate chainspec template and will be passed to build-spec --chain <chain>
 token-symbol = "TST" # customizations such as this don't take effect if you use --chainspec
 token-decimal = 12 
-chain-id = "testnet" # Substrate chain-id, a string
 
 [[nodes]]
 name = "elizabeth"

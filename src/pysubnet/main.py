@@ -292,7 +292,13 @@ def start_network(config: CliConfig):
     print("\nNetwork is running! Press Ctrl+C to stop")
     print("Check logs: ")
     pprint(
-        [os.path.join(ROOT_DIR, node["name"], node["name"] + ".log") for node in NODES],
+        [
+            [
+                os.path.join(ROOT_DIR, node["name"], node["name"] + ".log"),
+                f"https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A{node['rpc-port']}#/explorer",
+            ]
+            for node in NODES
+        ],
     )
     try:
         while True:

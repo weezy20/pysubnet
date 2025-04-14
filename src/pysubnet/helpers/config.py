@@ -13,9 +13,6 @@ class NetworkConfig(BaseModel):
     Chainspec customizations loaded from a config file
     """
 
-    name: str
-    """The name of the network"""
-    chain: str
     chain_id: str = Field(..., alias="chain-id")
     token_symbol: str = Field(..., alias="token-symbol", min_length=1, max_length=12)
     token_decimal: int = Field(..., alias="token-decimal")
