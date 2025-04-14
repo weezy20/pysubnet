@@ -106,5 +106,3 @@ def prompt_str(prompt_text: str, default: str = None) -> str:
                 raise ValueError("Empty response. Aborting.")
             print("Invalid response. Please provide a non-empty input.")
             response = input(prompt_text).strip()
-
-
