@@ -423,8 +423,6 @@ def main():
     chainspec = init_bootnodes_chainspec(
         CHAINSPEC
     )  # Initializes ROOT_DIR/chainspec.json
-    # Generate raw chainspec
-    config.raw_chainspec = generate_raw_chainspec(chainspec)
     if INTERACTIVE and not config.poa:
         proceed = prompt_bool(
             "Does your node only require Aura/Grandpa authorities (Proof-of-Authority node as in node-template/frontier-template)?\n"
@@ -443,6 +441,9 @@ def main():
         else:
             custom_network_config(chainspec, config)
 
+    # Generate raw chainspec
+    # Fix bug introduced in https://github.com/weezy20/pysubnet/commit/c6628f07471b7fbeb37c8f17d8f89d406195b212
+    config.raw_chainspec = generate_raw_chainspec(chainspec)
     if RUN_NETWORK:
         if INTERACTIVE:
             if prompt_bool("Start substrate network? (yes/y/yay/no/n)", default=True):
