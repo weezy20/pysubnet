@@ -365,13 +365,15 @@ def main():
     ):  # neither -i nor --bin, Default to `./substrate`
         config.bin = os.path.join(os.getcwd(), "substrate")
         SUBSTRATE = os.path.abspath(config.bin)
+    else:
+        SUBSTRATE = os.path.abspath(config.bin)
 
     # Validate SUBSTRATE
-    if not os.path.isfile(config.bin) or not os.access(config.bin, os.X_OK):
+    if not os.path.isfile(SUBSTRATE) or not os.access(SUBSTRATE, os.X_OK):
         raise Exception(
-            f"Substrate binary not found or not executable: {config.bin}\n"
+            f"Substrate binary not found or not executable: {SUBSTRATE}\n"
             "Potential Solutions:\n"
-            '1. Check if a substrate bin named "substrate" is present in cwdpath.\n'
+            f'1. Check if {SUBSTRATE} is present\n'
             "2. Ensure the file is executable.\n"
             "3. Provide --bin <path/to/your/node> to specify a different binary. Such as --bin ./target/release/substrate-node-template\n"
             "4. Use -i to select a binary interactively.\n"
