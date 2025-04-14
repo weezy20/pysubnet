@@ -2,6 +2,7 @@ import argparse
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
+from pprint import pprint
 from typing import List, Dict
 
 from pysubnet.helpers.config import NetworkConfig, load_config, load_nodes_from_config
@@ -127,9 +128,12 @@ def parse_args() -> CliConfig:
         if pysubnetConfig.network is not None:
             config.network = pysubnetConfig.network
             config.apply_chainspec_customizations = True
-
     # --chainspec overrides the config file chainspec & customizations defined under [network]
     if args.chainspec is not None:
         config.chainspec = args.chainspec
         config.apply_chainspec_customizations = False
     return config
+
+if __name__ == "__main__":
+    config = parse_args()
+    pprint(config)

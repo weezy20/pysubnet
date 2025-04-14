@@ -3,6 +3,7 @@ from pprint import pprint
 from typing import List, Optional
 from pydantic import BaseModel, Field
 import json
+import pydantic
 import tomli
 import sys
 
@@ -25,9 +26,9 @@ class NodeConfig(BaseModel):
     """
 
     name: str
-    p2p_port: int = Field(..., alias="p2p-port")
-    rpc_port: int = Field(..., alias="rpc-port")
-    prometheus_port: int = Field(..., alias="prometheus-port")
+    rpc_port: int = Field(..., alias="rpc-port", ge=1, le=65535)
+    prometheus_port: int = Field(..., alias="prometheus-port", ge=1, le=65535)
+    p2p_port: int = Field(..., alias="p2p-port", ge=1, le=65535)
     # Final balance is this multiplied by 10^token_decimal
     balance: Optional[int] = 0
 
@@ -35,6 +36,34 @@ class NodeConfig(BaseModel):
 class PySubnetConfig(BaseModel):
     network: NetworkConfig
     nodes: List[NodeConfig]
+
+    @pydantic.model_validator(mode="after")
+    def validate_unique_node_attributes(cls, values):
+        nodes = values.nodes if values.nodes else []
+        if nodes:
+            seen_names = set()
+            seen_rpc_ports = set()
+            seen_p2p_ports = set()
+            seen_prometheus_ports = set()
+
+            for node in nodes:
+                if node.name in seen_names:
+                    raise ValueError(f"Duplicate node name found: {node.name}")
+                if node.rpc_port in seen_rpc_ports:
+                    raise ValueError(f"Duplicate rpc-port found: {node.rpc_port}")
+                if node.p2p_port in seen_p2p_ports:
+                    raise ValueError(f"Duplicate p2p-port found: {node.p2p_port}")
+                if node.prometheus_port in seen_prometheus_ports:
+                    raise ValueError(
+                        f"Duplicate prometheus-port found: {node.prometheus_port}"
+                    )
+
+                seen_names.add(node.name)
+                seen_rpc_ports.add(node.rpc_port)
+                seen_p2p_ports.add(node.p2p_port)
+                seen_prometheus_ports.add(node.prometheus_port)
+
+        return values
 
 
 def load_config(config_file_path: Path) -> PySubnetConfig:
