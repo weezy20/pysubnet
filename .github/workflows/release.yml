@@ -4,92 +4,100 @@ on:
   release:
     types: [published]
   workflow_dispatch:
-    
+
 permissions:
   contents: write
   packages: write
-
+env:
+  PYTHON_VERSION: "3.10"
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Install UV
-      run: |
-        curl -LsSf https://astral.sh/uv/install.sh | sh
-        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+      - name: Install UV
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.13'
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
 
-    - name: Install dependencies with UV
-      run: |
-        uv pip install --system .
-        uv pip install --system build twine
+      # Modified step to create venv and install dependencies
+      - name: Create venv and install dependencies
+        run: |
+          uv venv --python=python${{ env.PYTHON_VERSION }}
 
-    - name: Build source and wheel distribution
-      run: uv build
+          echo "VIRTUAL_ENV_PATH=.venv/bin" >> $GITHUB_ENV
+          uv pip install .
+          uv pip install twine
 
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: pysubnet
-        path: dist/*
+      # Modified step to run build within the venv
+      - name: Build source and wheel distribution
+        run: |
+          source ${{ env.VIRTUAL_ENV_PATH }}/activate # Activate the venv
+          uv build
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pysubnet
+          path: dist/*
 
   publish-testpypi:
     needs: build
     runs-on: ubuntu-latest
 
     steps:
-    - name: Download artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: pysubnet
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: pysubnet
 
-    - name: Upload to GitHub Release (Draft)
-      uses: ncipollo/release-action@v1
-      with:
-        artifacts: pysubnet
-        token: ${{ secrets.GITHUB_TOKEN }}
-        tag: ${{ github.ref_name }}
-        body: "Draft release ${{ github.ref_name }} of pysubnet (includes PyPI + TestPyPI)"
-        draft: true
-        prerelease: false
+      - name: Upload to GitHub Release (Draft)
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: pysubnet
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ github.ref_name }}
+          body: "Draft release ${{ github.ref_name }} of pysubnet (includes PyPI + TestPyPI)"
+          draft: true
+          prerelease: false
 
-    - name: Publish to TestPyPI
-      env:
-        TWINE_USERNAME: __token__
-        TWINE_PASSWORD: ${{ secrets.TEST_PYPI_API_TOKEN }}
-      run: |
-        pip install twine
-        twine upload --repository testpypi dist/*.whl dist/*.tar.gz
+      - name: Publish to TestPyPI
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.TEST_PYPI_API_TOKEN }}
+        run: |
+          pip install twine
+          twine upload --repository testpypi dist/*.whl dist/*.tar.gz
 
   publish-pypi:
     needs: publish-testpypi
     runs-on: ubuntu-latest
 
     steps:
-    - name: Download artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: pysubnet
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: pysubnet
 
-    - name: Publish to PyPI
-      env:
-        TWINE_USERNAME: __token__
-        TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-      run: |
-        pip install twine
-        twine upload dist/*.whl dist/*.tar.gz
+      - name: Publish to PyPI
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          pip install twine
+          twine upload dist/*.whl dist/*.tar.gz
 
-    - name: Finalize GitHub Release (Undraft)
-      uses: softprops/action-gh-release@v1
-      with:
-        tag_name: ${{ github.ref_name }}
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Finalize GitHub Release (Undraft)
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
