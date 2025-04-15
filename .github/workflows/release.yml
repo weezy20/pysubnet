@@ -20,21 +20,21 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.13'
+        python-version: '3.10'
 
     - name: Install dependencies with UV
       run: |
-        uv pip install --system .  # Installs from pyproject.toml
-        uv pip install --system pyinstaller
+        uv pip install --system .  # Install your project
+        uv pip install --system twine
 
-    - name: Build executable
-      run: pyinstaller --onefile src/main.py --name pysubnet
+    - name: Build source and wheel distribution
+      run: uv build
 
-    - name: Upload release artifact
+    - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
         name: pysubnet
-        path: dist/pysubnet
+        path: dist/*
 
   publish:
     needs: build
@@ -46,7 +46,7 @@ jobs:
       with:
         name: pysubnet
 
-    - name: Upload release to GitHub
+    - name: Upload artifacts to GitHub Release
       uses: ncipollo/release-action@v1
       with:
         artifacts: pysubnet
@@ -55,3 +55,11 @@ jobs:
         body: "Release ${{ github.ref_name }} of pysubnet"
         draft: false
         prerelease: false
+
+    - name: Publish to TestPyPI
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.TEST_PYPI_API_TOKEN }}
+      run: |
+        pip install twine
+        twine upload --repository testpypi dist/*.whl dist/*.tar.gz
