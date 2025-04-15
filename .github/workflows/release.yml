@@ -23,14 +23,12 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      # Modified step to create venv and install dependencies
       - name: Create venv and install dependencies
         run: |
             python -m venv .venv
             .venv/bin/pip install .
             .venv/bin/pip install twine build
 
-      # Modified step to run build within the venv
       - name: Build source and wheel distribution
         run: |
           source .venv/bin/activate # Activate the venv
@@ -63,16 +61,15 @@ jobs:
           draft: true
           prerelease: false
 
-      # Add this step to install twine
-      - name: Install Twine
-        run: python -m pip install twine
+      - name: Install/Upgrade Twine and Packaging
+        run: python -m pip install --upgrade twine packaging # Upgrade both
 
       - name: Publish to TestPyPI
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.TEST_PYPI_API_TOKEN }}
         run: |
-          twine upload --repository testpypi dist/*.whl dist/*.tar.gz
+          twine upload --repository testpypi dist/*
 
   publish-pypi:
     needs: publish-testpypi
@@ -85,16 +82,15 @@ jobs:
           name: pysubnet
           path: dist
 
-      # Add this step to install twine
-      - name: Install Twine
-        run: python -m pip install twine
+      - name: Install/Upgrade Twine and Packaging
+        run: python -m pip install --upgrade twine packaging # Upgrade both
 
       - name: Publish to PyPI
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
         run: |
-          twine upload dist/*.whl dist/*.tar.gz
+          twine upload dist/*
 
       - name: Finalize GitHub Release (Undraft)
         uses: softprops/action-gh-release@v1
