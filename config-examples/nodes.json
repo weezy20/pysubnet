@@ -1,10 +1,9 @@
 {
     "network": {
         "name": "My Pysubnet Testnet",
-        "chain": "local",
+        "chain-id": "local",
         "token-symbol": "TST",
-        "token-decimal": 12,
-        "chain-id": "testnet"
+        "token-decimal": 12
     },
     "nodes": [
         {
