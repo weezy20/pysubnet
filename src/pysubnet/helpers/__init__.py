@@ -1,5 +1,4 @@
 # helpers/__init__.py
-import os
 from pathlib import Path
 from .process import parse_subkey_output, run_command
 from .prompts import prompt_str, prompt_path, prompt_bool

@@ -209,7 +209,7 @@ def setup_dirs():
                 f"[yellow]⚠ Warning:[/yellow] Root directory [cyan]{ROOT_DIR}[/cyan] is not empty."
             )
             if Confirm.ask("Clear it out?", default=True):
-                with console.status("[red]Cleaning directory...[/red]") as status:
+                with console.status("[red]Cleaning directory...[/red]"):
                     shutil.rmtree(ROOT_DIR)
                     os.makedirs(ROOT_DIR, exist_ok=True)
                 console.print("[green]✓ Directory cleaned[/green]")
@@ -219,7 +219,7 @@ def setup_dirs():
             raise non_empty_exception
 
     # Create directories
-    with console.status("[cyan]Creating node directories...[/cyan]") as status:
+    with console.status("[cyan]Creating node directories...[/cyan]"):
         for node in NODES:
             os.makedirs(f"{ROOT_DIR}/{node['name']}", exist_ok=False)
             node["base_path"] = f"{ROOT_DIR}/{node['name']}"
@@ -287,7 +287,7 @@ def generate_raw_chainspec(chainspec: Path) -> Path:
 
     raw_chainspec_path = os.path.join(ROOT_DIR, "raw_chainspec.json")
     try:
-        with console.status("[cyan]Building raw chainspec...[/cyan]") as status:
+        with console.status("[cyan]Building raw chainspec...[/cyan]"):
             result = subprocess.run(
                 [
                     SUBSTRATE,
