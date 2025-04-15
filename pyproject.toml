@@ -5,7 +5,7 @@ description = "Deploy a substrate permissioned network using python"
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [{ name = "Abhishek Shah", email = "abhishekshah3@gmail.com" }]
-license = { file = "LICENSE" }
+license = "Apache-2.0"
 
 dependencies = [
     "eth-hash[pysha3]>=0.7.1",
@@ -32,12 +32,17 @@ classifiers = [
 ]
 
 [build-system]
-requires = ["setuptools>=77.0.3", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling>=1.17.0"]
+build-backend = "hatchling.build"
 
-[tool.setuptools]
-package-dir = { "" = "src" }
-packages = ["pysubnet"]
+[tool.hatch.metadata]
+license.text = "Apache-2.0"
+
+[tool.hatch.build.targets.sdist]
+include = ["src/**", "LICENSE", "README.md"]
+
+[tool.hatch.build.targets.wheel]
+include = ["src/**", "LICENSE", "README.md"]
 
 
 [project.scripts]
