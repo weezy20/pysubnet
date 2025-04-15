@@ -2,6 +2,7 @@
 chain-id = "local"      # --chainspec takes preference over this, use to generate chainspec template and will be passed to build-spec --chain <chain>
 token-symbol = "TST" # customizations such as this don't take effect if you use --chainspec
 token-decimal = 12 
+remove-existing-balances = true # Removes existing balances in the genesis block, if any present
 
 [[nodes]]
 name = "elizabeth"
