@@ -1,7 +1,6 @@
 import os
 import json
 from pathlib import Path
-from pprint import pprint
 import subprocess
 import time
 import sys
@@ -225,7 +224,7 @@ def setup_dirs():
             os.makedirs(f"{ROOT_DIR}/{node['name']}", exist_ok=False)
             node["base_path"] = f"{ROOT_DIR}/{node['name']}"
             console.print(
-                f"\t[dim]Created directory for[/dim] [cyan]{node['name']}[/cyan]"
+                f"\t[dim][green]✓[/green] Created directory for[/dim] [cyan]{node['name']}[/cyan]"
             )
 
     console.print("[bold green]✓ Directory structure ready[/bold green]")
@@ -341,15 +340,17 @@ def display_network_status():
     console.print(table)
 
 
-def stop_network():
+def stop_network(node_procs: list):
     """Stop network with rich progress"""
+    print("\n")  # To make space for interrupt
     console.print(Panel.fit("[bold red]🛑 Stopping network[/bold red]"))
 
     with Progress() as progress:
-        task = progress.add_task("[cyan]Stopping nodes...", total=len(NODES) * 10)
-        for _ in range(10):  # Simulate stopping nodes
-            time.sleep(0.2)
-            progress.update(task, advance=len(NODES))
+        task = progress.add_task("[cyan]Stopping nodes...", total=len(NODES))
+
+        for node in node_procs:
+            cleanup_node(node)
+            progress.update(task, advance=1)
 
     console.print("[bold green]✓ All nodes stopped successfully[/bold green]")
 
@@ -362,8 +363,9 @@ def start_network(config: CliConfig):
             subtitle="[dim]This may take a moment...[/dim]",
         )
     )
-
     node_procs = []
+    start_messages = []  # Store messages here
+
     with Progress() as progress:
         task = progress.add_task("[cyan]Starting nodes...", total=len(NODES))
 
@@ -409,27 +411,37 @@ def start_network(config: CliConfig):
             progress.update(
                 task, advance=1, description=f"[cyan]Starting {node['name']}..."
             )
-            console.print(
+            # Store the message instead of printing immediately
+            start_messages.append(
                 f"\t[dim]Started {node['name']} (PID: [yellow]{p.pid}[/yellow])[/dim]"
             )
+        progress.update(
+            task,
+            description="[bold green]✓ All nodes started successfully[/bold green]",
+        )
+
+    # Print all collected messages after the progress bar finishes
+    for msg in start_messages:
+        console.print(msg, soft_wrap=True)
 
     display_network_status()
-
     try:
         while True:
             time.sleep(1.5)
     except KeyboardInterrupt:
-        stop_network()
-        # Cleanup processes and files
-        for node_proc in node_procs:
-            node_proc["process"].terminate()
-            try:
-                node_proc["process"].wait(timeout=2)
-            except subprocess.TimeoutExpired:
-                node_proc["process"].kill()
-                node_proc["process"].wait()
-            node_proc["log_file"].close()
-            node_proc["err_log_file"].close()
+        stop_network(node_procs)
+
+
+def cleanup_node(node_proc: dict):
+    """Cleanup node process and log files"""
+    node_proc["process"].terminate()
+    try:
+        node_proc["process"].wait(timeout=2)
+    except subprocess.TimeoutExpired:
+        node_proc["process"].kill()
+        node_proc["process"].wait()
+    node_proc["log_file"].close()
+    node_proc["err_log_file"].close()
 
 
 def main():
@@ -455,8 +467,8 @@ def main():
     if config.clean:
         console.print(
             Panel.fit(
-                "[bold red]Cleaning up directory[/bold red]",
-                subtitle=f"[dim]{config.root_dir}[/dim]",
+                "[bold red]Cleaning up root directory[/bold red] "
+                f"[dim]{config.root_dir}[/dim]",
             )
         )
         shutil.rmtree(config.root_dir)
@@ -505,7 +517,7 @@ def main():
 
     # Interactive mode for account type
     match (config.account_key_type, INTERACTIVE):
-        case (None, True):  # no --account and -i
+        case (None, True):  # no --account + -i
             config.account_key_type = AccountKeyType.from_string(
                 Prompt.ask(
                     "Select account key type",
@@ -521,16 +533,20 @@ def main():
             pass
 
     # Print configuration summary
+    summary = Text()
+    summary.append("Chainspec: ", style="dim")
+    summary.append(f"{CHAINSPEC}\n", style="cyan")
+    summary.append("Substrate binary: ", style="dim")
+    summary.append(f"{SUBSTRATE}\n", style="green")
+    summary.append("Root directory: ", style="dim")
+    summary.append(f"{ROOT_DIR}\n", style="yellow")
+    summary.append("Account key type: ", style="dim")
+    summary.append(f"{config.account_key_type.value}", style="magenta")
+
+    # Print as a single panel
     console.print(
-        Panel.fit("[bold cyan]Configuration Summary[/bold cyan]", padding=(1, 2))
+        Panel.fit(summary, title="[bold cyan]-- Using --[/bold cyan]", padding=(1, 2))
     )
-    console.print(f"[dim]Chainspec:[/dim] [cyan]{CHAINSPEC}[/cyan]")
-    console.print(f"[dim]Substrate binary:[/dim] [green]{SUBSTRATE}[/green]")
-    console.print(f"[dim]Root directory:[/dim] [yellow]{ROOT_DIR}[/yellow]")
-    console.print(
-        f"[dim]Account key type:[/dim] [magenta]{config.account_key_type.value}[/magenta]"
-    )
-    console.print()
 
     # Setup directory tree for NODEs
     setup_dirs()
