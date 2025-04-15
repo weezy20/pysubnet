@@ -1,6 +1,5 @@
 import os
 from pathlib import Path
-import subprocess
 
 TRIES = 2  # Number extra tries before aborting
 
@@ -106,5 +105,3 @@ def prompt_str(prompt_text: str, default: str = None) -> str:
                 raise ValueError("Empty response. Aborting.")
             print("Invalid response. Please provide a non-empty input.")
             response = input(prompt_text).strip()
-
-
