@@ -4,17 +4,21 @@
 # PySubnet 
 ### Quick & easy mutli-node substrate network setup
 
+
+![PySubnet Demo](docs/pysubnet.gif)
+
+
 ## 🔧 Description
 
 **PySubnet** automates the process generating, inserting and updating chainspecs for multi-node setups. Like:
 
 - Generating **Aura** and **Grandpa** keys (or any other keys that you wish to use as session keys).
-- Inserting them into the **keystore** for each node's `--base-path`
+- Inserting them into the **keystore** for each node `key insert --base-path ...`
 - Generating **libp2p** node keys to use for running the node using `--node-key-file`.
-- Updating the **chainspec** with all relevant key and network information.
+- Updating the **chainspec** with bootnodes and starting authority set.
 - Extending chainspec edit process using custom chainspec_handlers defined in [chainspec_handlers.py](./chainspec_handlers.py) file
 
-Currently, it supports **Aura + Grandpa** based Substrate chains. You can adapt the logic to support different key types as needed.
+Currently, it supports **Aura + Grandpa** based Substrate chains. You can adapt the logic to support different key types as needed. (See `custom_network_config` for an example with pallet-sessions and substrate-validator-set)
 
 It also supports key generations for AccountIds using built-in subkey in the substrate binary provided or using ECDSA keys generated using the [ethereum](./ethereum.py) module.
 

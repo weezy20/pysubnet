@@ -1,6 +1,6 @@
 [project]
 name = "pysubnet"
-version = "1.1.2"
+version = "1.2"
 description = "Deploy a substrate permissioned network using python"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -11,6 +11,9 @@ dependencies = [
     "eth-hash[pysha3]>=0.7.1",
     "eth-keys>=0.7.0",
     "eth-utils>=5.2.0",
+    "pydantic>=2.11.3",
+    "rich>=14.0.0",
+    "tomli>=2.2.1",
 ]
 
 classifiers = [
@@ -34,13 +37,6 @@ build-backend = "hatchling.build"
 
 [tool.hatch.metadata]
 license.text = "Apache-2.0"
-
-[tool.hatch.build.targets.sdist]
-include = ["src/**", "LICENSE", "README.md"]
-
-[tool.hatch.build.targets.wheel]
-include = ["src/**", "LICENSE", "README.md"]
-
 
 [project.scripts]
 pysubnet = "pysubnet.main:main"

@@ -9,7 +9,7 @@ Then include your handler in the main script before `start_network()` is called
 import json
 
 from .accounts import AccountKeyType
-from .config import Config
+from .cli import CliConfig
 
 
 def load_chainspec(chainspec: str):
@@ -124,7 +124,7 @@ def edit_account_balances(
     write_chainspec(chainspec, data)
 
 
-def enable_poa(chainspec: str, config: Config):
+def enable_poa(chainspec: str, config: CliConfig):
     data = load_chainspec(chainspec)
     # Add PoA specific configurations
     aura_authorities = []
@@ -143,7 +143,7 @@ def enable_poa(chainspec: str, config: Config):
     write_chainspec(chainspec, data)
 
 
-def custom_network_config(chainspec: str, config: Config):
+def custom_network_config(chainspec: str, config: CliConfig):
     """
     Modify the chainspec for custom network configuration.
     """
