@@ -19,6 +19,7 @@ class NetworkConfig(BaseModel):
     remove_existing_balances: bool = Field(False, alias="remove-existing-balances")
 
 
+
 class NodeConfig(BaseModel):
     """
     Information for a validator node
