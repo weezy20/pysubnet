@@ -4,6 +4,10 @@
 # PySubnet 
 ### Quick & easy mutli-node substrate network setup
 
+
+![PySubnet Demo](docs/pysubnet.gif)
+
+
 ## 🔧 Description
 
 **PySubnet** automates the process generating, inserting and updating chainspecs for multi-node setups. Like:
