@@ -32,8 +32,8 @@ classifiers = [
 requires = ["hatchling>=1.17.0"]
 build-backend = "hatchling.build"
 
-[tool.hatch]
-metadata = { license = { text = "Apache-2.0" } }
+[tool.hatch.metadata]
+license.text = "Apache-2.0"
 
 [tool.hatch.build.targets.sdist]
 include = ["src/**", "LICENSE", "README.md"]
