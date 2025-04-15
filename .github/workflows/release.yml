@@ -58,6 +58,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: pysubnet
+          path: dist
 
       - name: Upload to GitHub Release (Draft)
         uses: ncipollo/release-action@v1
@@ -65,7 +66,7 @@ jobs:
           artifacts: pysubnet
           token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ github.ref_name }}
-          body: "Draft release ${{ github.ref_name }} of pysubnet (includes PyPI + TestPyPI)"
+          body: "Draft release ${{ github.ref_name }} of pysubnet"
           draft: true
           prerelease: false
 
@@ -86,6 +87,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: pysubnet
+          path: dist
 
       - name: Publish to PyPI
         env:
