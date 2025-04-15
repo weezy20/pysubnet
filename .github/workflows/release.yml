@@ -20,12 +20,12 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.10'
+        python-version: '3.13'
 
     - name: Install dependencies with UV
       run: |
-        uv pip install --system .  # Install your project
-        uv pip install --system twine
+        uv pip install --system .
+        uv pip install --system build twine
 
     - name: Build source and wheel distribution
       run: uv build
@@ -36,24 +36,24 @@ jobs:
         name: pysubnet
         path: dist/*
 
-  publish:
+  publish-testpypi:
     needs: build
     runs-on: ubuntu-latest
 
     steps:
-    - name: Download artifact
+    - name: Download artifacts
       uses: actions/download-artifact@v4
       with:
         name: pysubnet
 
-    - name: Upload artifacts to GitHub Release
+    - name: Upload to GitHub Release (Draft)
       uses: ncipollo/release-action@v1
       with:
         artifacts: pysubnet
         token: ${{ secrets.GITHUB_TOKEN }}
         tag: ${{ github.ref_name }}
-        body: "Release ${{ github.ref_name }} of pysubnet"
-        draft: false
+        body: "Draft release ${{ github.ref_name }} of pysubnet (includes PyPI + TestPyPI)"
+        draft: true
         prerelease: false
 
     - name: Publish to TestPyPI
@@ -63,3 +63,28 @@ jobs:
       run: |
         pip install twine
         twine upload --repository testpypi dist/*.whl dist/*.tar.gz
+
+  publish-pypi:
+    needs: publish-testpypi
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Download artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: pysubnet
+
+    - name: Publish to PyPI
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+      run: |
+        pip install twine
+        twine upload dist/*.whl dist/*.tar.gz
+
+    - name: Finalize GitHub Release (Undraft)
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ github.ref_name }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
