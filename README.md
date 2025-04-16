@@ -5,7 +5,7 @@
 ### Quick & easy mutli-node substrate network setup
 
 
-![PySubnet Demo](docs/pysubnet.gif)
+![PySubnet](docs/assets/pysubnet.png)
 
 
 ## 🔧 Description
@@ -104,16 +104,7 @@ pysubnet -c # (clean existing root-dir if present)
 ``` 
 ---
 
-### 🧹 Clean Start
-
-By default, PySubnet **won’t overwrite an existing root directory** if it has contents. To clear it before launching:
-
-```sh
-pysubnet --clean 
-or 
-pysubnet -c 
-```
-
+![pysubnet demo](docs/assets/pysubnet.gif)
 ---
 
 ### 📁 Custom Root Directory
