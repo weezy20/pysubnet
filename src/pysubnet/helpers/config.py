@@ -1,6 +1,8 @@
+from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
 from pprint import pprint
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 from pydantic import BaseModel, Field
 import json
 import pydantic
@@ -8,16 +10,44 @@ import tomli
 import sys
 
 
+class ChainTypeEnum(Enum):
+    DEVELOPMENT = "Development"
+    LOCAL = "Local"
+    LIVE = "Live"
+
+
+@dataclass
+class ChainType:
+    value: Union[ChainTypeEnum, str]
+
+    def is_custom(self):
+        return (
+            isinstance(self.value, str)
+            and self.value not in ChainTypeEnum._value2member_map_
+        )
+
+    def __str__(self):
+        return str(self.value)
+
+
+class ChainConfig(BaseModel):
+    """
+    Configuration for chain
+    """
+
+    chain_name: str = Field(..., alias="name")
+    chain_id: str = Field(..., alias="chain-id")
+    chain_type: ChainType = Field(..., alias="chain-type")
+
+
 class NetworkConfig(BaseModel):
     """
     Chainspec customizations loaded from a config file
     """
 
-    chain_id: str = Field(..., alias="chain-id")
     token_symbol: str = Field(..., alias="token-symbol", min_length=1, max_length=12)
     token_decimal: int = Field(..., alias="token-decimal")
     remove_existing_balances: bool = Field(False, alias="remove-existing-balances")
-
 
 
 class NodeConfig(BaseModel):
