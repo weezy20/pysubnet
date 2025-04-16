@@ -1,30 +1,35 @@
 {
     "network": {
-        "name": "My Pysubnet Testnet",
-        "chain-id": "local",
-        "token-symbol": "TST",
-        "token-decimal": 12
+      "token-symbol": "TST",
+      "token-decimal": 12,
+      "remove-existing-balances": true,
+      "chain": {
+        "chain-name": "My Awesome Network",
+        "chain-id": "my_local",
+        "chain-type": "Live"
+      }
     },
     "nodes": [
-        {
-            "name": "elizabeth",
-            "p2p-port": 30333,
-            "rpc-port": 9943,
-            "prometheus-port": 9615,
-            "balance": 4000
-        },
-        {
-            "name": "rachel",
-            "p2p-port": 30334,
-            "rpc-port": 9944,
-            "prometheus-port": 9614,
-            "balance": 5000
-        },
-        {
-            "name": "skyler",
-            "p2p-port": 30336,
-            "rpc-port": 9946,
-            "prometheus-port": 9616
-        }
+      {
+        "name": "elizabeth",
+        "p2p-port": 30333,
+        "rpc-port": 9943,
+        "prometheus-port": 9613,
+        "balance": 4000
+      },
+      {
+        "name": "rachel",
+        "p2p-port": 30334,
+        "rpc-port": 9944,
+        "prometheus-port": 9614,
+        "balance": 5000
+      },
+      {
+        "name": "skyler",
+        "p2p-port": 30336,
+        "rpc-port": 9946,
+        "prometheus-port": 9616
+      }
     ]
-}
+  }
+  
