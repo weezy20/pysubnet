@@ -8,16 +8,31 @@ import tomli
 import sys
 
 
+# class ChainTypeEnum(Enum):
+#     DEVELOPMENT = "Development"
+#     LOCAL = "Local"
+#     LIVE = "Live"
+
+
+class ChainConfig(BaseModel):
+    """
+    Configuration for chain
+    """
+
+    chain_name: str = Field(..., alias="name")
+    chain_id: str = Field(..., alias="chain-id")
+    chain_type: str = Field(..., alias="chain-type")
+
+
 class NetworkConfig(BaseModel):
     """
     Chainspec customizations loaded from a config file
     """
 
-    chain_id: str = Field(..., alias="chain-id")
+    chain: ChainConfig = Field(..., alias="chain")
     token_symbol: str = Field(..., alias="token-symbol", min_length=1, max_length=12)
     token_decimal: int = Field(..., alias="token-decimal")
     remove_existing_balances: bool = Field(False, alias="remove-existing-balances")
-
 
 
 class NodeConfig(BaseModel):
@@ -121,6 +136,7 @@ if __name__ == "__main__":
         pprint([node.model_dump() for node in config.nodes])
         print("Network:")
         pprint(config.network.model_dump())
+
     except ValueError as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)

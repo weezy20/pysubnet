@@ -4,7 +4,7 @@
       "token-decimal": 12,
       "remove-existing-balances": true,
       "chain": {
-        "chain-name": "My Awesome Network",
+        "name": "My Awesome Network",
         "chain-id": "my_local",
         "chain-type": "Live"
       }
