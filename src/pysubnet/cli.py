@@ -128,15 +128,15 @@ def parse_args() -> CliConfig:
         if pysubnetConfig.network is not None:
             config.network = pysubnetConfig.network
             config.apply_chainspec_customizations = True
+            if pysubnetConfig.network.chainspec is not None:
+                config.chainspec = pysubnetConfig.network.chainspec or "local"
     # --chainspec overrides the config file chainspec & customizations defined under [network]
-    if args.chainspec is not None:
+    elif args.chainspec is not None:
         config.chainspec = args.chainspec
         config.apply_chainspec_customizations = False
     else:
         # Use loaded `chain` from config.network otherwise we fallback to "dev"
-        config.chainspec = (
-            "local" if config.network.chain.chain_id else "dev"
-        )
+        config.chainspec = "dev"
     return config
 
 
