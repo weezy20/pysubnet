@@ -1,6 +1,6 @@
 from pathlib import Path
 from pprint import pprint
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional
 from pydantic import BaseModel, Field
 import json
 import pydantic
@@ -21,7 +21,7 @@ class ChainConfig(BaseModel):
 
     chain_name: str = Field(..., alias="name")
     chain_id: str = Field(..., alias="chain-id")
-    chain_type: Union[str] = Field(..., alias="chain-type")
+    chain_type: str = Field(..., alias="chain-type")
 
 
 class NetworkConfig(BaseModel):
