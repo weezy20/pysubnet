@@ -1,5 +1,3 @@
-from dataclasses import dataclass
-from enum import Enum
 from pathlib import Path
 from pprint import pprint
 from typing import Dict, List, Optional, Union
@@ -10,24 +8,10 @@ import tomli
 import sys
 
 
-class ChainTypeEnum(Enum):
-    DEVELOPMENT = "Development"
-    LOCAL = "Local"
-    LIVE = "Live"
-
-
-@dataclass
-class ChainType:
-    value: Union[ChainTypeEnum, str]
-
-    def is_custom(self):
-        return (
-            isinstance(self.value, str)
-            and self.value not in ChainTypeEnum._value2member_map_
-        )
-
-    def __str__(self):
-        return str(self.value)
+# class ChainTypeEnum(Enum):
+#     DEVELOPMENT = "Development"
+#     LOCAL = "Local"
+#     LIVE = "Live"
 
 
 class ChainConfig(BaseModel):
@@ -37,7 +21,7 @@ class ChainConfig(BaseModel):
 
     chain_name: str = Field(..., alias="name")
     chain_id: str = Field(..., alias="chain-id")
-    chain_type: ChainType = Field(..., alias="chain-type")
+    chain_type: Union[str] = Field(..., alias="chain-type")
 
 
 class NetworkConfig(BaseModel):
@@ -45,6 +29,7 @@ class NetworkConfig(BaseModel):
     Chainspec customizations loaded from a config file
     """
 
+    chain: ChainConfig = Field(..., alias="chain")
     token_symbol: str = Field(..., alias="token-symbol", min_length=1, max_length=12)
     token_decimal: int = Field(..., alias="token-decimal")
     remove_existing_balances: bool = Field(False, alias="remove-existing-balances")
@@ -151,6 +136,7 @@ if __name__ == "__main__":
         pprint([node.model_dump() for node in config.nodes])
         print("Network:")
         pprint(config.network.model_dump())
+
     except ValueError as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)

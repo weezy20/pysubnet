@@ -230,7 +230,7 @@ def setup_dirs():
     console.print("[bold green]✓ Directory structure ready[/bold green]")
 
 
-def init_bootnodes_chainspec(chainspec: str) -> Path:
+def init_bootnodes_chainspec(chainspec: str, config: CliConfig) -> Path:
     """Generate chainspec with rich output"""
     console.print(
         Panel.fit(
@@ -268,6 +268,15 @@ def init_bootnodes_chainspec(chainspec: str) -> Path:
         for n in NODES
     ]
     chainspec_path = os.path.join(ROOT_DIR, "chainspec.json")
+
+    if config.apply_chainspec_customizations:
+        chainspec_config = config.network.chain
+        if chainspec_config.chain_name:
+            c["name"] = chainspec_config.chain_name
+        if chainspec_config.chain_id:
+            c["id"] = chainspec_config.chain_id
+        if chainspec_config.chain_type:
+            c["chainType"] = chainspec_config.chain_type
 
     with open(chainspec_path, "w") as f:
         json.dump(c, f, indent=2)
@@ -563,7 +572,7 @@ def main():
         insert_keystore(CHAINSPEC)
 
     # Modified chainspec with bootnodes inserted
-    chainspec = init_bootnodes_chainspec(CHAINSPEC)
+    chainspec = init_bootnodes_chainspec(CHAINSPEC, config)
 
     if INTERACTIVE and not config.poa:
         proceed = Confirm.ask(
