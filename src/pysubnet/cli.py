@@ -1,9 +1,11 @@
 import argparse
+from enum import Enum
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from pprint import pprint
 from typing import List, Dict
+from rich.console import Console
 
 from pysubnet.helpers.config import NetworkConfig, load_config, load_nodes_from_config
 
@@ -121,15 +123,24 @@ def parse_args() -> CliConfig:
         account_key_type=args.account,
         poa=args.poa,
     )
-
+    console = Console()
     if args.config_file is not None:
         pysubnetConfig = load_config(args.config_file)
         config.nodes = load_nodes_from_config(pysubnetConfig)
         if pysubnetConfig.network is not None:
             config.network = pysubnetConfig.network
             config.apply_chainspec_customizations = True
-            if pysubnetConfig.network.chainspec is not None:
-                config.chainspec = pysubnetConfig.network.chainspec or "local"
+            if pysubnetConfig.network.chain is not None:
+                chain_id = pysubnetConfig.network.chain.chain_id
+                if chain_id not in ["local", "dev"]:
+                    console.print(
+                        f"[red]Warning: chain_id '{chain_id}' is not a valid chainspec template. Using 'local' instead.[/red]"
+                    )
+                    chain_id = (
+                        "local"  # Ensure we correctly generate a chainspec template
+                    )
+                    # chain_id will be applied later due to apply_chainspec_customizations
+                config.chainspec = chain_id
     # --chainspec overrides the config file chainspec & customizations defined under [network]
     elif args.chainspec is not None:
         config.chainspec = args.chainspec

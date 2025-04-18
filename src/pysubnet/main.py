@@ -131,8 +131,12 @@ def generate_keys(account_key_type: AccountKeyType):
     )
 
 
-def insert_keystore(chainspec: str):
-    """Insert keys with rich progress"""
+def insert_keystore(chainspec: str, alternate=None):
+    """Insert keys with rich progress
+    Args:
+        chainspec (str): chain_id to use
+        alternate (str, optional): Move generated keys to alternate path, a different "chain_id" directory
+    """
     with Progress() as progress:
         task = progress.add_task(
             "[cyan]Inserting keys into keystore...", total=len(NODES) * 2
@@ -188,7 +192,15 @@ def insert_keystore(chainspec: str):
                 advance=1,
                 description=f"[cyan]Inserting Grandpa keys for {node['name']}",
             )
-
+    if alternate is not None:
+        original_path = os.path.join(node["name"], "chains", chainspec, "keystore")
+        alternate_path = os.path.join(node["name"], "chains", alternate, "keystore")
+        # Move generated keys to the keystore directory
+        for node in NODES:
+            shutil.move(
+                original_path,
+                alternate_path,
+            )
     console.print("[bold green]✓ All keys inserted successfully[/bold green]")
 
 
@@ -562,6 +574,15 @@ def main():
 
     # Generate keys and setup nodes
     generate_keys(account_key_type=config.account_key_type)
+
+    customChainId = None
+    if config.apply_chainspec_customizations:
+        customChainId = config.network.chain.chain_id
+        if customChainId:
+            console.print(
+                f"[dim]Using custom chain id from config file: {customChainId}[/dim]",
+                style="bold yellow",
+            )
 
     if INTERACTIVE:
         if not Confirm.ask("Keys generated. Proceed to insert?", default=True):
