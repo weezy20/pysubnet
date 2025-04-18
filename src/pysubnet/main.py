@@ -133,12 +133,16 @@ def generate_keys(account_key_type: AccountKeyType):
     )
 
 
-def insert_keystore(chainspec: str, alternate=None):
-    """Insert keys with rich progress
+def insert_keystore(chainspec: Chainspec, alternate=None):
+    """Insert Aura/Grandpa session keys into keystore for a particular Chainspec instance.
     Args:
-        chainspec (str): chain_id to use
+        chainspec (Chainsepc): Instance of Chainspec to use
         alternate (str, optional): Move generated keys to alternate path, a different "chain_id" directory
     """
+    template_chainspec = str(
+        chainspec.value
+    )  # one of ["dev", "local"] or "/path/to/chainspec.json"
+    original_chainid = chainspec.get_chainid()
     with Progress() as progress:
         task = progress.add_task(
             "[cyan]Inserting keys into keystore...", total=len(NODES) * 2
@@ -154,7 +158,7 @@ def insert_keystore(chainspec: str, alternate=None):
                     "--base-path",
                     node["name"],
                     "--chain",
-                    chainspec,
+                    str(template_chainspec),
                     "--scheme",
                     "Sr25519",
                     "--key-type",
@@ -179,7 +183,7 @@ def insert_keystore(chainspec: str, alternate=None):
                     "--base-path",
                     node["name"],
                     "--chain",
-                    chainspec,
+                    str(template_chainspec),
                     "--scheme",
                     "Ed25519",
                     "--key-type",
@@ -195,14 +199,18 @@ def insert_keystore(chainspec: str, alternate=None):
                 description=f"[cyan]Inserting Grandpa keys for {node['name']}",
             )
     if alternate is not None:
-        original_path = os.path.join(node["name"], "chains", chainspec, "keystore")
-        alternate_path = os.path.join(node["name"], "chains", alternate, "keystore")
-        # Move generated keys to the keystore directory
         for node in NODES:
-            shutil.move(
-                original_path,
-                alternate_path,
+            original_path = os.path.join(
+                node["name"], "chains", original_chainid, "keystore"
             )
+            alternate_path = os.path.join(node["name"], "chains", alternate, "keystore")
+            # Move generated keys to the keystore directory
+            for node in NODES:
+                shutil.move(
+                    original_path,
+                    alternate_path,
+                )
+                shutil.rmtree(original_path)
     console.print("[bold green]✓ All keys inserted successfully[/bold green]")
 
 
@@ -244,7 +252,7 @@ def setup_dirs():
     console.print("[bold green]✓ Directory structure ready[/bold green]")
 
 
-def init_bootnodes_chainspec(chainspec: str, config: CliConfig) -> Path:
+def init_bootnodes_chainspec(chainspec: Chainspec, config: CliConfig) -> Chainspec:
     """Generate chainspec with rich output"""
     console.print(
         Panel.fit(
@@ -253,8 +261,8 @@ def init_bootnodes_chainspec(chainspec: str, config: CliConfig) -> Path:
         )
     )
 
-    c: str = None  # In-memory chainspec buffer
-    if chainspec in ["dev", "local"]:
+    c = chainspec.load_json()  # In-memory chainspec buffer
+    if chainspec.get_chainid() in ["dev", "local"]:
         console.print(f"[dim]Generating new {chainspec} chainspec...[/dim]")
         c = json.loads(
             run_command(
@@ -262,19 +270,12 @@ def init_bootnodes_chainspec(chainspec: str, config: CliConfig) -> Path:
                     SUBSTRATE,
                     "build-spec",
                     "--chain",
-                    chainspec,
+                    chainspec.get_chainid(),
                     "--disable-default-bootnode",
                 ],
                 cwd=ROOT_DIR,
             ).stdout
         )
-    elif os.path.isfile(chainspec):
-        try:
-            with open(chainspec, "r") as f:
-                c = json.load(f)
-            console.print(f"[dim]Loaded chainspec from:[/dim] [cyan]{chainspec}[/cyan]")
-        except json.JSONDecodeError:
-            raise ValueError(f"File exists but is not valid JSON: {chainspec}")
 
     # Set bootnodes
     c["bootNodes"] = [
@@ -469,12 +470,12 @@ def cleanup_node(node_proc: dict):
 
 def main():
     config = parse_args()
-    # global INTERACTIVE, RUN_NETWORK, ROOT_DIR, SUBSTRATE, CHAINSPEC, NODES
-    INTERACTIVE: bool = config.interactive
-    RUN_NETWORK: bool = config.run_network
+    global INTERACTIVE, RUN_NETWORK, ROOT_DIR, SUBSTRATE, CHAINSPEC, NODES
+    INTERACTIVE = config.interactive
+    RUN_NETWORK = config.run_network
     ROOT_DIR = config.root_dir
-    SUBSTRATE: Path = config.bin
-    CHAINSPEC: Chainspec = config.chainspec
+    SUBSTRATE = config.bin
+    CHAINSPEC = config.chainspec
     NODES = config.nodes
 
     # Print header
@@ -509,7 +510,6 @@ def main():
     else:
         SUBSTRATE = os.path.abspath(config.bin)
 
-    # Validate SUBSTRATE
     if not os.path.isfile(SUBSTRATE) or not os.access(SUBSTRATE, os.X_OK):
         console.print(
             Panel.fit(
@@ -531,7 +531,7 @@ def main():
                 Prompt.ask(
                     "Select account key type",
                     choices=["ecdsa", "sr25519"],
-                    default="sr25519",
+                    default="ecdsa",
                 )
             )
         case (None, False):  # non-interactive mode without --account, default to ecdsa
@@ -576,9 +576,9 @@ def main():
         if not Confirm.ask("Keys generated. Proceed to insert?", default=True):
             console.print("[yellow]Aborting key insertion[/yellow]")
             return
-        insert_keystore(CHAINSPEC)
+        insert_keystore(CHAINSPEC, alternate=customChainId)
     else:
-        insert_keystore(CHAINSPEC)
+        insert_keystore(CHAINSPEC, alternate=customChainId)
 
     # Modified chainspec with bootnodes inserted
     chainspec = init_bootnodes_chainspec(CHAINSPEC, config)

@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 from enum import Enum
 from typing import Union, Optional
@@ -51,7 +52,7 @@ class Chainspec(BaseModel):
         if "genesis" not in data or "runtimeGenesis" not in data["genesis"]:
             raise ValueError("Chainspec missing genesis.runtimeGenesis configuration")
 
-        return path
+        return os.path.abspath(path)
 
     def __str__(self) -> str:
         if isinstance(self.value, Path):
@@ -68,7 +69,35 @@ class Chainspec(BaseModel):
 
     @classmethod
     def from_path(cls, path: Union[str, Path]) -> "Chainspec":
-        return cls(value=Path(path))
+        return cls(value=Path(os.path.abspath(path)))
+
+    def get_chainid(self) -> str:
+        """Get the chain ID from the chainspec."""
+        if isinstance(self.value, ChainspecType):
+            return self.value.value
+
+        if isinstance(self.value, Path):
+            try:
+                with self.value.open("r") as f:
+                    data = json.load(f)
+                return data.get("id", "unknown")
+            except (json.JSONDecodeError, OSError) as e:
+                # Pydantic will prevent this from happening, but just in case
+                raise ValueError(f"Error reading chainspec file '{self.value}': {e}")
+
+        raise ValueError("Invalid chainspec value")
+
+    def load_json(self) -> str | None:
+        """Load the chainspec file into memory only if it's a path. Returns None otherwise."""
+        if isinstance(self.value, Path):
+            try:
+                with self.value.open("r") as f:
+                    data = json.load(f)
+                return data
+            except (json.JSONDecodeError, OSError) as e:
+                # Pydantic will prevent this from happening, but just in case
+                raise ValueError(f"Error reading chainspec file '{self.value}': {e}")
+        return None
 
 
 if __name__ == "__main__":

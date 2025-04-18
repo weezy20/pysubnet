@@ -122,7 +122,7 @@ def parse_args() -> CliConfig:
         account_key_type=args.account,
         poa=args.poa,
     )
-    if args.config_file is not None:
+    if args.config_file is not None and args.chainspec is None:
         pysubnetConfig = load_config(args.config_file)
         config.nodes = load_nodes_from_config(pysubnetConfig)
         if pysubnetConfig.network is not None:
@@ -130,7 +130,11 @@ def parse_args() -> CliConfig:
             config.apply_chainspec_customizations = True
             if pysubnetConfig.network.chain is not None:
                 chain_id = pysubnetConfig.network.chain.chain_id
-                config.chainspec = Chainspec(value=chain_id)
+                if chain_id not in ["local", "dev"]:
+                    print("Warning: Currently custom chain-ids are not supported")
+                    config.chainspec = Chainspec(value="local")
+                else:
+                    config.chainspec = Chainspec(value=chain_id)
     # --chainspec overrides the config file chainspec & disables customizations defined under [network]
     elif args.chainspec is not None:
         config.chainspec = Chainspec(value=args.chainspec)
