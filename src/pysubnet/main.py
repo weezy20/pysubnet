@@ -13,6 +13,8 @@ from rich.panel import Panel
 from rich.text import Text
 from rich.prompt import Confirm, Prompt
 
+from pysubnet.chainspec import Chainspec
+
 from .helpers import (
     l2_seg,
     run_command,
@@ -467,12 +469,12 @@ def cleanup_node(node_proc: dict):
 
 def main():
     config = parse_args()
-    global INTERACTIVE, RUN_NETWORK, ROOT_DIR, SUBSTRATE, CHAINSPEC, NODES
-    INTERACTIVE = config.interactive
-    RUN_NETWORK = config.run_network
+    # global INTERACTIVE, RUN_NETWORK, ROOT_DIR, SUBSTRATE, CHAINSPEC, NODES
+    INTERACTIVE: bool = config.interactive
+    RUN_NETWORK: bool = config.run_network
     ROOT_DIR = config.root_dir
-    SUBSTRATE = config.bin
-    CHAINSPEC = config.chainspec
+    SUBSTRATE: Path = config.bin
+    CHAINSPEC: Chainspec = config.chainspec
     NODES = config.nodes
 
     # Print header
@@ -521,20 +523,6 @@ def main():
         console.print("3. Provide --bin <path/to/your/node>")
         console.print("4. Use -i to select a binary interactively")
         raise Exception(f"Substrate binary not found or not executable: {SUBSTRATE}")
-
-    # Validate chainspec
-    if os.path.isfile(config.chainspec):
-        try:
-            with open(config.chainspec, "r") as f:
-                json.load(f)
-            CHAINSPEC = os.path.abspath(config.chainspec)
-            config.chainspec = CHAINSPEC
-        except json.JSONDecodeError:
-            raise Exception(f"Chainspec file is not valid JSON: {config.chainspec}")
-    elif config.chainspec in ["dev", "local"]:
-        pass
-    else:
-        raise Exception(f"Invalid chainspec argument: {config.chainspec}")
 
     # Interactive mode for account type
     match (config.account_key_type, INTERACTIVE):
