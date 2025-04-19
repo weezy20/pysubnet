@@ -13,7 +13,7 @@ from rich.panel import Panel
 from rich.text import Text
 from rich.prompt import Confirm, Prompt
 
-from pysubnet.chainspec import Chainspec
+from pysubnet.chainspec import Chainspec, ChainspecType
 
 from .helpers import (
     l2_seg,
@@ -139,9 +139,7 @@ def insert_keystore(chainspec: Chainspec, alternate=None):
         chainspec (Chainsepc): Instance of Chainspec to use
         alternate (str, optional): Move generated keys to alternate path, a different "chain_id" directory
     """
-    template_chainspec = str(
-        chainspec.value
-    )  # one of ["dev", "local"] or "/path/to/chainspec.json"
+
     original_chainid = chainspec.get_chainid()
     with Progress() as progress:
         task = progress.add_task(
@@ -158,7 +156,7 @@ def insert_keystore(chainspec: Chainspec, alternate=None):
                     "--base-path",
                     node["name"],
                     "--chain",
-                    str(template_chainspec),
+                    str(chainspec),
                     "--scheme",
                     "Sr25519",
                     "--key-type",
@@ -183,7 +181,7 @@ def insert_keystore(chainspec: Chainspec, alternate=None):
                     "--base-path",
                     node["name"],
                     "--chain",
-                    str(template_chainspec),
+                    str(chainspec),
                     "--scheme",
                     "Ed25519",
                     "--key-type",
@@ -200,17 +198,32 @@ def insert_keystore(chainspec: Chainspec, alternate=None):
             )
     if alternate is not None:
         for node in NODES:
-            original_path = os.path.join(
-                node["name"], "chains", original_chainid, "keystore"
-            )
-            alternate_path = os.path.join(node["name"], "chains", alternate, "keystore")
-            # Move generated keys to the keystore directory
-            for node in NODES:
-                shutil.move(
-                    original_path,
-                    alternate_path,
+            orginal_keystore = Path(
+                os.path.join(
+                    ROOT_DIR, node["name"], "chains", original_chainid, "keystore"
                 )
-                shutil.rmtree(original_path)
+            )
+            alternate_chain_dir = Path(
+                os.path.join(ROOT_DIR, node["name"], "chains", alternate)
+            )
+
+            # Ensure the target directory exists
+            alternate_chain_dir.mkdir(parents=True, exist_ok=True)
+
+            try:
+                # Move the keystore directory into the alternate chain directory
+                # shutil.move needs string paths
+                shutil.move(orginal_keystore, alternate_chain_dir)
+
+                # Remove the original parent directory ('.../chains/<original_chainid>')
+                # original_keystore_p.parent gets the directory containing 'keystore'
+                shutil.rmtree(orginal_keystore.parent)
+
+            except Exception as e:
+                console.print(
+                    f"[bold red]Error processing keystore move for {node['name']}: {e}[/bold red]"
+                )
+
     console.print("[bold green]✓ All keys inserted successfully[/bold green]")
 
 
@@ -262,7 +275,7 @@ def init_bootnodes_chainspec(chainspec: Chainspec, config: CliConfig) -> Chainsp
     )
 
     c = chainspec.load_json()  # In-memory chainspec buffer
-    if chainspec.get_chainid() in ["dev", "local"]:
+    if chainspec.get_chainid() in ["dev", "local_testnet"]:
         console.print(f"[dim]Generating new {chainspec} chainspec...[/dim]")
         c = json.loads(
             run_command(
@@ -270,7 +283,7 @@ def init_bootnodes_chainspec(chainspec: Chainspec, config: CliConfig) -> Chainsp
                     SUBSTRATE,
                     "build-spec",
                     "--chain",
-                    chainspec.get_chainid(),
+                    str(chainspec),
                     "--disable-default-bootnode",
                 ],
                 cwd=ROOT_DIR,
@@ -576,9 +589,7 @@ def main():
         if not Confirm.ask("Keys generated. Proceed to insert?", default=True):
             console.print("[yellow]Aborting key insertion[/yellow]")
             return
-        insert_keystore(CHAINSPEC, alternate=customChainId)
-    else:
-        insert_keystore(CHAINSPEC, alternate=customChainId)
+    insert_keystore(CHAINSPEC, alternate=customChainId)
 
     # Modified chainspec with bootnodes inserted
     chainspec = init_bootnodes_chainspec(CHAINSPEC, config)

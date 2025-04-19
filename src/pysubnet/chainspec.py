@@ -74,7 +74,11 @@ class Chainspec(BaseModel):
     def get_chainid(self) -> str:
         """Get the chain ID from the chainspec."""
         if isinstance(self.value, ChainspecType):
-            return self.value.value
+            match self.value:
+                case ChainspecType.LOCAL:
+                    return "local_testnet"
+                case ChainspecType.DEV:
+                    return "dev"
 
         if isinstance(self.value, Path):
             try:

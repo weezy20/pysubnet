@@ -117,7 +117,6 @@ def parse_args() -> CliConfig:
         run_network=args.run_network,
         root_dir=os.path.abspath(args.root),
         clean=args.clean,
-        chainspec=args.chainspec,
         bin=args.bin,
         account_key_type=args.account,
         poa=args.poa,
