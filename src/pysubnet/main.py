@@ -140,7 +140,7 @@ def insert_keystore(chainspec: Chainspec, alternate=None):
         alternate (str, optional): Move generated keys to alternate path, a different "chain_id" directory
     """
 
-    original_chainid = chainspec.get_chainid()
+    original_chainid = chainspec.get_chainid_with(SUBSTRATE)
     with Progress() as progress:
         task = progress.add_task(
             "[cyan]Inserting keys into keystore...", total=len(NODES) * 2

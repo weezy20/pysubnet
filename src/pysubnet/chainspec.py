@@ -5,6 +5,8 @@ from enum import Enum
 from typing import Union, Optional
 from pydantic import BaseModel, field_validator
 
+from pysubnet.helpers.process import run_command
+
 
 class ChainspecType(str, Enum):
     LOCAL = "local"
@@ -72,15 +74,19 @@ class Chainspec(BaseModel):
         return cls(value=Path(os.path.abspath(path)))
 
     def get_chainid(self) -> str:
-        """Get the chain ID from the chainspec."""
+        """Get the chain ID from the chainspec. Uses hardcoded values as present in default substrate node.
+        Use `get_chainid_with(bin)` to get the chain ID from a generated chainspec file."""
+
         if isinstance(self.value, ChainspecType):
             match self.value:
                 case ChainspecType.LOCAL:
-                    return "local_testnet"
+                    return (
+                        "local_testnet"  # As appears on most chains local_config() fn
+                    )
                 case ChainspecType.DEV:
-                    return "dev"
+                    return "dev"  # As appears on most chains development_config() fn
 
-        if isinstance(self.value, Path):
+        elif isinstance(self.value, Path):
             try:
                 with self.value.open("r") as f:
                     data = json.load(f)
@@ -90,6 +96,26 @@ class Chainspec(BaseModel):
                 raise ValueError(f"Error reading chainspec file '{self.value}': {e}")
 
         raise ValueError("Invalid chainspec value")
+
+    def get_chainid_with(self, bin: Path) -> str:
+        """Get the chain ID directly from a generated chainspec file."""
+        c = json.loads(
+            run_command(
+                [
+                    bin,
+                    "build-spec",
+                    "--chain",
+                    str(self),
+                    "--disable-default-bootnode",
+                ],
+            ).stdout
+        )
+        chain_id = c.get("id")
+        if not chain_id:
+            raise ValueError(
+                f"Chain ID not found in generated chainspec with binary: {bin} using chainspec: {self}"
+            )
+        return chain_id
 
     def load_json(self) -> str | None:
         """Load the chainspec file into memory only if it's a path. Returns None otherwise."""
