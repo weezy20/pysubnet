@@ -275,8 +275,8 @@ def init_bootnodes_chainspec(chainspec: Chainspec, config: CliConfig) -> Chainsp
     )
 
     c = chainspec.load_json()  # In-memory chainspec buffer
-    if chainspec.get_chainid() in ["dev", "local_testnet"]:
-        console.print(f"[dim]Generating new {chainspec} chainspec...[/dim]")
+    if isinstance(chainspec.value, ChainspecType):
+        console.print(f"[dim]Generating new [{chainspec}] chainspec...[/dim]")
         c = json.loads(
             run_command(
                 [
@@ -318,7 +318,7 @@ def init_bootnodes_chainspec(chainspec: Chainspec, config: CliConfig) -> Chainsp
     return chainspec_path
 
 
-def generate_raw_chainspec(chainspec: Path) -> Path:
+def generate_raw_chainspec(chainspec_path: Path) -> Path:
     """Generate raw chainspec with rich output"""
     console.print(Panel.fit("[bold cyan]Generating raw chainspec[/bold cyan]"))
 
@@ -330,7 +330,7 @@ def generate_raw_chainspec(chainspec: Path) -> Path:
                     SUBSTRATE,
                     "build-spec",
                     "--chain",
-                    chainspec,
+                    chainspec_path,
                     "--raw",
                 ],
                 cwd=ROOT_DIR,
