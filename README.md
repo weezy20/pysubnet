@@ -179,6 +179,7 @@ pysubnet --poa -r
 | `--root` | Set custom root directory for network artifacts | `pysubnet --root ./my-net` |
 | `-c`, `--clean` | Clean the root directory before starting | `pysubnet -c` |
 | `--chainspec` | Provide a chainspec file to use as a starter template or use `dev` / `local` | `--chainspec dev` or `--chainspec ./custom.json` |
+| `--config`, `-f` | Pass in a configuration file to customize the generated chainspec. `--chainspec <file>` overrides customizations defined here. See [docs/config.md](docs/config.md)
 | `--bin` | Path to Substrate binary | `--bin ./target/release/node-template` |
 | `--account` | AccountId type to use for ValidatorId, "ecdsa" or "sr25519" | `--account ecdsa` or `--account sr25519"` |
 | `--poa` | Enable POA. Absence of this flag branches code into `custom_network_config` which is user defined | `pysubnet --poa --run` |
