@@ -72,11 +72,14 @@ class SubstrateType(BaseModel):
                         desc = f"{status} {detail}"
                     progress.update(task, description=desc)
                     progress.start_task(task)
-            proc = run_command([
-                "docker", "run", "--rm", source_ref,
-                *command
-            ])
-            data = parse_subkey_output(proc.stdout)
+            container = client.containers.run(
+                source_ref,
+                command,
+                remove=True,
+                stdout=True,
+                stderr=True
+            )
+            data = parse_subkey_output(container.decode("utf-8"))
             values["exec_type"] = ExecType.DOCKER
 
         else:
