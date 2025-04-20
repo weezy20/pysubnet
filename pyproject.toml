@@ -8,6 +8,7 @@ authors = [{ name = "Abhishek Shah", email = "abhishekshah3@gmail.com" }]
 license = "Apache-2.0"
 
 dependencies = [
+    "docker>=7.1.0",
     "eth-hash[pysha3]>=0.7.1",
     "eth-keys>=0.7.0",
     "eth-utils>=5.2.0",

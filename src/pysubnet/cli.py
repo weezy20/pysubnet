@@ -6,10 +6,9 @@ from pprint import pprint
 from typing import List, Dict
 
 from pysubnet.helpers.config import NetworkConfig, load_config, load_nodes_from_config
-
+from pysubnet.helpers.substrate import SubstrateBinary
 from .accounts import AccountKeyType
 from .chainspec import Chainspec
-
 
 @dataclass
 class CliConfig:
@@ -94,7 +93,11 @@ def parse_args() -> CliConfig:
         type=str,
         help="Path to chainspec file or 'dev' | 'local'",
     )
-    parser.add_argument("--bin", type=Path, help="Path to substrate binary")
+    bin_docker = parser.add_mutually_exclusive_group()
+    bin_docker.add_argument("--bin", type=Path, help="Path to substrate binary")
+    bin_docker.add_argument(
+        "--docker", type=str, help="Docker image to use for network"
+    )
     parser.add_argument(
         "--account",
         type=AccountKeyType.from_string,
@@ -111,7 +114,7 @@ def parse_args() -> CliConfig:
     # for others it can lead to uncaught bugs! Hence use + <default value> unless a default is provided
     # in argsparse itself. We explicitly specify defaults for argparse itself so `or <default_val>` not required here
     args = parser.parse_args()
-
+  
     config = CliConfig(
         interactive=args.interactive,
         run_network=args.run_network,
