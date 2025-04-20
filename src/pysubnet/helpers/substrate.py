@@ -1,12 +1,15 @@
 import os
 import re
+import sys
 from enum import Enum
 from pathlib import Path
 
 import docker
 from pydantic import BaseModel, model_validator
+from rich.console import Console
+from rich.progress import Progress, SpinnerColumn, TextColumn
+
 from .process import is_valid_public_key, parse_subkey_output, run_command
-import sys
 
 
 class ExecType(str, Enum):
@@ -15,60 +18,83 @@ class ExecType(str, Enum):
 
 
 class SubstrateType(BaseModel):
+    """
+    Validates and represents a Substrate runtime interface
+    via a local binary or Docker image.
+
+    Attributes:
+        source (str): Resolved path or image name:tag
+        exec_type (ExecType): BIN for local binaries, DOCKER for containers
+    """
     source: str
-    type: ExecType
+    exec_type: ExecType
 
     @model_validator(mode="before")
     def validate(cls, values):
         source_ref = values.get("source")
-        if source_ref is None:
-            raise ValueError("Missing source")
-        command = ["key", "generate", "--scheme", "sr25519"]
-        # Check if it's a filesystem path
-        path_obj = Path(source_ref).expanduser()
-        if path_obj.exists():
-            abs_path = str(path_obj.resolve())
-            if not path_obj.is_file():
-                raise ValueError(f"Expected file but {source_ref} is not a file")
-            if not os.access(abs_path, os.X_OK):
-                raise ValueError(f"{source_ref} is not executable")
-            # Test to see if this is a valid substrate node
-            proc = run_command([abs_path, *command])
-            output = proc.stdout
-            data = parse_subkey_output(output)
-            values["source"] = abs_path
-            values["type"] = ExecType.BIN
+        if not source_ref:
+            raise ValueError("`source` is required and cannot be empty")
 
-        # Otherwise treat as Docker image name:tag
-        elif re.match(r"^[\w./-]+:[\w.-]+$", source_ref):
+        command = ["key", "generate", "--scheme", "sr25519"]
+        data = None
+
+        # Try filesystem binary first
+        path = Path(source_ref).expanduser()
+        if path.exists():
+            resolved = str(path.resolve())
+            if not path.is_file():
+                raise ValueError(f"Not a file: {resolved}")
+            if not os.access(resolved, os.X_OK):
+                raise ValueError(f"Not executable: {resolved}")
+            proc = run_command([resolved, *command])
+            data = parse_subkey_output(proc.stdout)
+            values["source"] = resolved
+            values["exec_type"] = ExecType.BIN
+
+        # Otherwise, expect Docker image name:tag
+        elif re.fullmatch(r"[\w./-]+:[\w.-]+", source_ref):
+            console = Console()
             client = docker.from_env()
-            try:
-                # Test to see if this is a valid substrate node image
-                output = client.containers.run(
-                    source_ref,
-                    command=command,
-                    remove=True,
-                    stdout=True,
-                    stderr=False,
-                )
-            except docker.errors.ImageNotFound:
-                raise ValueError(f"Docker image '{source_ref}' not found")
-            if isinstance(output, bytes):
-                output = output.decode()
-            data = parse_subkey_output(output)
-            values["type"] = ExecType.DOCKER
+            console.print(f"Searching Docker image '{source_ref}'...")
+            progress = Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                console=console,
+                transient=True
+            )
+            with progress:
+                task = progress.add_task("Connecting to Docker daemon...", start=False)
+                for line in client.api.pull(source_ref, stream=True, decode=True):
+                    status = line.get("status")
+                    detail = line.get("progress") or line.get("progressDetail")
+                    desc = status
+                    if detail:
+                        desc = f"{status} {detail}"
+                    progress.update(task, description=desc)
+                    progress.start_task(task)
+            proc = run_command([
+                "docker", "run", "--rm", source_ref,
+                *command
+            ])
+            data = parse_subkey_output(proc.stdout)
+            values["exec_type"] = ExecType.DOCKER
 
         else:
-            f"'{source_ref}' is neither an existing executable path nor a valid Docker image <name:tag>"
+            raise ValueError(
+                f"Invalid source '{source_ref}': must be an existing executable path "
+                "or a valid Docker image name:tag"
+            )
 
-        # Validate public_key is 32-byte hex
+        # Ensure public key is valid sr25519 hex (32 bytes)
         pub = data.get("public_key")
         if not pub or not is_valid_public_key(pub):
+            src = values.get("source", source_ref)
             raise ValueError(
-                f"Invalid sr25519 public key generated using provided executable {source_ref}: {pub}"
-                f"Command ran: {command}"
-                f"Output: {data}"
-                "If your node is a custom build and this is not expected, please report this issue on https://github.com/weezy20/pysubnet/issues"
+                f"Invalid sr25519 public key generated using provided executable {src}: {pub}\n"
+                f"Command ran: {command}\n"
+                f"Output: {data}\n"
+                "If your node is a custom build and this is not expected, "
+                "please report this issue on https://github.com/weezy20/pysubnet/issues"
             )
 
         return values
@@ -76,29 +102,33 @@ class SubstrateType(BaseModel):
 
 class Substrate:
     """
-    Represents a Substrate runtime interface either via a local binary or Docker image.
+    High-level wrapper for a Substrate interface.
+
+    On initialization, validates the provided source,
+    and exposes the exec_type and resolved source.
     """
 
-    def __init__(self, source_ref: str):
-        # Determine absolute path for filesystem binaries
-        path_obj = Path(source_ref)
-        if path_obj.exists():
-            source = str(path_obj.resolve())
-        else:
-            source = source_ref
+    def __init__(self, source: str):
+        # Delegate validation and resolution to SubstrateType
+        self.config = SubstrateType(source=source)
 
-        self.source = source
-        # Construct and validate the SubstrateType
-        self.type = SubstrateType(source=source)
+    @property
+    def exec_type(self) -> ExecType:
+        return self.config.exec_type
+
+    @property
+    def source(self) -> str:
+        return self.config.source
 
     def __repr__(self):
-        return f"<Substrate source={self.source!r} type={self.type.type.value}>"
+        return (
+            f"<Substrate source={self.source!r} "
+            f"exec_type={self.exec_type.value}>"
+        )
 
 
 if __name__ == "__main__":
-    source_ref = sys.argv[1] if len(sys.argv) > 1 else "substrate"
-    substrate = Substrate(source_ref)
-    print(f"Substrate instance: {substrate}")
-    print(f"SubstrateType instance: {substrate.type}")
-    print(f"ExecType instance: {substrate.type.type}")
-    print(f"ExecType value: \"{substrate.type.type.value}\"")
+    ref = sys.argv[1] if len(sys.argv) > 1 else "substrate"
+    sub = Substrate(ref)
+    print(sub)
+    print(f"Type: {sub.exec_type}, Source: {sub.source}")
