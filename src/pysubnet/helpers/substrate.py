@@ -3,11 +3,14 @@ import re
 import sys
 from enum import Enum
 from pathlib import Path
+from typing import List
 
 import docker
 from pydantic import BaseModel, model_validator
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
+
+from pysubnet.cli import CliConfig
 
 from .process import is_valid_public_key, parse_subkey_output, run_command
 
@@ -26,6 +29,7 @@ class SubstrateType(BaseModel):
         source (str): Resolved path or image name:tag
         exec_type (ExecType): BIN for local binaries, DOCKER for containers
     """
+
     source: str
     exec_type: ExecType
 
@@ -60,7 +64,7 @@ class SubstrateType(BaseModel):
                 SpinnerColumn(),
                 TextColumn("[progress.description]{task.description}"),
                 console=console,
-                transient=True
+                transient=True,
             )
             with progress:
                 task = progress.add_task("Connecting to Docker daemon...", start=False)
@@ -73,11 +77,7 @@ class SubstrateType(BaseModel):
                     progress.update(task, description=desc)
                     progress.start_task(task)
             container = client.containers.run(
-                source_ref,
-                command,
-                remove=True,
-                stdout=True,
-                stderr=True
+                source_ref, command, remove=True, stdout=True, stderr=True
             )
             data = parse_subkey_output(container.decode("utf-8"))
             values["exec_type"] = ExecType.DOCKER
@@ -114,6 +114,9 @@ class Substrate:
     def __init__(self, source: str):
         # Delegate validation and resolution to SubstrateType
         self.config = SubstrateType(source=source)
+        self.running_nodes = []  # For use with BIN
+        self.running_containers = []  # For use with DOCKER
+        self.open_files = []  # For log and log.error files
 
     @property
     def exec_type(self) -> ExecType:
@@ -124,10 +127,25 @@ class Substrate:
         return self.config.source
 
     def __repr__(self):
-        return (
-            f"<Substrate source={self.source!r} "
-            f"exec_type={self.exec_type.value}>"
-        )
+        return f"<Substrate source={self.source!r} exec_type={self.exec_type.value}>"
+
+    def run_command(self, command_args: List[str], cwd=None):
+        if self.exec_type == ExecType.BIN:
+            return run_command([self.source, *command_args], cwd=cwd)
+        if self.exec_type == ExecType.DOCKER:
+            client = docker.from_env()
+            return client.containers.run(
+                self.source,
+                command_args,
+                remove=True,
+                stdout=True,
+                stderr=True,
+                working_dir=cwd,
+            )
+
+    def start_network(self, config: CliConfig):
+        """Spawns a substrate node"""
+        pass
 
 
 if __name__ == "__main__":
