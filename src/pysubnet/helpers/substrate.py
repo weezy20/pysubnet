@@ -190,12 +190,14 @@ class Substrate:
                 # Prepare tmp.json path
                 tmp_json_path = "tmp.json"
                 if cwd:
-                    tmp_json_path = os.path.join(cwd, tmp_json_path)
+                    tmp_json_path = os.path.join(cwd, "tmp", "tmp.json")
+                    os.makedirs(os.path.dirname(tmp_json_path), exist_ok=True)
                 else:
                     tmp_json_path = os.path.abspath(tmp_json_path)
 
                 docker_mount_path = "/workspace"
-                docker_json_path = f"{docker_mount_path}/tmp.json"
+                docker_tmp_mount_path = "/workspace/tmp"
+                docker_json_path = f"{docker_tmp_mount_path}/tmp.json"
 
                 # Get default entrypoint
                 image_info = client.api.inspect_image(self.source)
@@ -208,18 +210,30 @@ class Substrate:
                 )
 
                 try:
+                    # Prepare volumes
+                    volumes = {}
+                    if cwd:
+                        volumes[os.path.abspath(cwd)] = {
+                            "bind": docker_mount_path,
+                            "mode": "rw",
+                        }
+                        volumes[os.path.dirname(tmp_json_path)] = {
+                            "bind": docker_tmp_mount_path,
+                            "mode": "rw",
+                        }
+                    else:
+                        volumes[os.path.dirname(tmp_json_path)] = {
+                            "bind": docker_tmp_mount_path,
+                            "mode": "rw",
+                        }
+
                     # Run with shell as entrypoint to allow redirection
                     container = client.containers.run(
                         image=self.source,
                         entrypoint=["/bin/sh", "-c"],
                         command=[cmd],
-                        volumes={
-                            os.path.dirname(tmp_json_path): {
-                                "bind": docker_mount_path,
-                                "mode": "rw",
-                            }
-                        },
-                        working_dir=docker_mount_path,
+                        volumes=volumes,
+                        working_dir=docker_mount_path if cwd else docker_tmp_mount_path,
                         detach=True,
                     )
                     result = container.wait()
