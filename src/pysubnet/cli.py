@@ -129,9 +129,8 @@ def parse_args() -> CliConfig:
     elif args.docker is not None:
         config.substrate = Substrate(args.docker)
 
-
     if args.config_file is not None and args.chainspec is None:
-        pysubnetConfig = load_config(args.config_file)
+        pysubnetConfig = load_config(args.config_file, {"skip_port_validation": False})
         config.nodes = load_nodes_from_config(pysubnetConfig)
         if pysubnetConfig.network is not None:
             config.network = pysubnetConfig.network

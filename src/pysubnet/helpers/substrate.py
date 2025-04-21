@@ -442,6 +442,7 @@ class Substrate:
 
     def _stop_network_containers(self):
         """Stop network running as Docker containers"""
+        print()
         console.print(Panel.fit("[bold red]🛑 Stopping network[/bold red]"))
 
         with Progress() as progress:
