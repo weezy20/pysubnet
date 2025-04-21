@@ -1,9 +1,11 @@
 import os
 import re
+import shutil
 import subprocess
 import sys
 from enum import Enum
 from pathlib import Path
+import tempfile
 import time
 from typing import Any, Dict, List, TYPE_CHECKING
 
@@ -18,6 +20,7 @@ if TYPE_CHECKING:
     from pysubnet.cli import CliConfig
 
 from .process import is_valid_public_key, parse_subkey_output, run_command
+import json as json_lib
 
 console = Console()
 
@@ -66,11 +69,13 @@ class SubstrateType(BaseModel):
         elif re.fullmatch(r"[\w./-]+:[\w.-]+", source_ref):
             console = Console()
             client = docker.from_env()
-            
+
             # Check if image already exists locally
             try:
                 client.images.get(source_ref)
-                console.print(f"[green]✓ Found Docker image '{source_ref}' locally[/green]")
+                console.print(
+                    f"[green]✓ Found Docker image '{source_ref}' locally[/green]"
+                )
             except docker.errors.ImageNotFound:
                 console.print(f"Searching Docker image '{source_ref}'...")
                 progress = Progress(
@@ -80,7 +85,9 @@ class SubstrateType(BaseModel):
                     transient=True,
                 )
                 with progress:
-                    task = progress.add_task("Connecting to Docker daemon...", start=False)
+                    task = progress.add_task(
+                        "Connecting to Docker daemon...", start=False
+                    )
                     for line in client.api.pull(source_ref, stream=True, decode=True):
                         status = line.get("status")
                         detail = line.get("progress") or line.get("progressDetail")
@@ -97,10 +104,10 @@ class SubstrateType(BaseModel):
 
         else:
             console.print(
-            Panel.fit(
-                "[bold red]Error: Invalid Substrate binary or image[/bold red]",
-                subtitle=f"[dim]{source_ref}[/dim]",
-            )
+                Panel.fit(
+                    "[bold red]Error: Invalid Substrate binary or image[/bold red]",
+                    subtitle=f"[dim]{source_ref}[/dim]",
+                )
             )
             console.print("[yellow]Potential solutions:[/yellow]")
             console.print("- Check if the binary exists at the specified path")
@@ -148,7 +155,7 @@ class Substrate:
     @property
     def exec_type(self) -> ExecType:
         return self.config.exec_type
-    
+
     @property
     def is_docker(self) -> bool:
         return self.exec_type == ExecType.DOCKER
@@ -164,19 +171,89 @@ class Substrate:
     def __repr__(self):
         return f"<Substrate source={self.source!r} exec_type={self.exec_type.value}>"
 
-    def run_command(self, command_args: List[str], cwd=None):
+    def run_command(self, command_args: List[str], cwd=None, json=False):
         if self.exec_type == ExecType.BIN:
-            return run_command([self.source, *command_args], cwd=cwd)
+            result = run_command([self.source, *command_args], cwd=cwd)
+            if json:
+                try:
+                    return json_lib.loads(result.stdout)
+                except json_lib.JSONDecodeError:
+                    raise ValueError(f"Failed to parse JSON output: {result.stdout}")
+            return {
+                "stdout": result.stdout,
+                "stderr": result.stderr if hasattr(result, "stderr") else "",
+            }
         if self.exec_type == ExecType.DOCKER:
             client = docker.from_env()
-            return client.containers.run(
-                self.source,
-                command_args,
-                remove=True,
-                stdout=True,
-                stderr=True,
-                working_dir=cwd,
-            )
+
+            if json:
+                # Prepare tmp.json path
+                tmp_json_path = "tmp.json"
+                if cwd:
+                    tmp_json_path = os.path.join(cwd, tmp_json_path)
+                else:
+                    tmp_json_path = os.path.abspath(tmp_json_path)
+
+                docker_mount_path = "/workspace"
+                docker_json_path = f"{docker_mount_path}/tmp.json"
+
+                # Get default entrypoint
+                image_info = client.api.inspect_image(self.source)
+                default_entrypoint = image_info.get("Config", {}).get("Entrypoint", [])
+
+                # Compose the command for shell redirection
+                cmd = (
+                    " ".join([*default_entrypoint, *command_args])
+                    + f" > {docker_json_path}"
+                )
+
+                try:
+                    # Run with shell as entrypoint to allow redirection
+                    container = client.containers.run(
+                        image=self.source,
+                        entrypoint=["/bin/sh", "-c"],
+                        command=[cmd],
+                        volumes={
+                            os.path.dirname(tmp_json_path): {
+                                "bind": docker_mount_path,
+                                "mode": "rw",
+                            }
+                        },
+                        working_dir=docker_mount_path,
+                        detach=True,
+                    )
+                    result = container.wait()
+                    exit_code = result.get("StatusCode", 0)
+                    container.remove()
+
+                    if exit_code != 0:
+                        raise RuntimeError(f"Container exited with code {exit_code}")
+
+                    # Read and parse JSON
+                    with open(tmp_json_path, "r") as f:
+                        json_data = json_lib.load(f)
+                    os.remove(tmp_json_path)
+                    return json_data
+
+                except Exception as e:
+                    # Clean up tmp.json if it exists
+                    if os.path.exists(tmp_json_path):
+                        os.remove(tmp_json_path)
+                    raise e
+            else:
+                # For non-JSON output, run container normally
+                result = client.containers.run(
+                    self.source,
+                    command_args,
+                    remove=True,
+                    stdout=True,
+                    stderr=True,
+                    volumes={cwd: {"bind": "/workspace", "mode": "rw"}}
+                    if cwd
+                    else None,
+                    working_dir="/workspace" if cwd else None,
+                )
+                return {"stdout": result.decode("utf-8")}
 
     def _display_network_status(self, config: "CliConfig"):
         """Show network status with rich table"""

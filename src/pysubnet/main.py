@@ -55,7 +55,7 @@ def generate_keys(account_key_type: AccountKeyType):
                 )
             )
             # Generate node key and peer ID
-            result = SUBSTRATE.run_command(
+            SUBSTRATE.run_command(
                 [
                     "key",
                     "generate-node-key",
@@ -64,7 +64,15 @@ def generate_keys(account_key_type: AccountKeyType):
                 ],
                 cwd=f"{node['base_path']}",
             )
-            node["libp2p-public-key"] = result.stderr.strip()
+            node["libp2p-public-key"] = SUBSTRATE.run_command(
+                [
+                    "key",
+                    "inspect-node-key",
+                    "--file",
+                    f"{node['name']}-node-private-key",
+                ],
+                cwd=f"{node['base_path']}",
+            )["stdout"].strip()
             with open(
                 f"{ROOT_DIR}/{node['name']}/{node['name']}-node-private-key", "r"
             ) as key_file:
@@ -72,9 +80,10 @@ def generate_keys(account_key_type: AccountKeyType):
 
             # Generate AURA keys (Sr25519)
             aura_result = SUBSTRATE.run_command(
-                ["key", "generate", "--scheme", "Sr25519"]
+                ["key", "generate", "--scheme", "Sr25519"],
+                cwd=f"{node['base_path']}",
             )
-            aura = parse_subkey_output(aura_result.stdout)
+            aura = parse_subkey_output(aura_result["stdout"])
             node["aura-public-key"] = aura["public_key"]
             node["aura-private-key"] = aura["secret"]
             node["aura-secret-phrase"] = aura["secret_phrase"]
@@ -82,9 +91,10 @@ def generate_keys(account_key_type: AccountKeyType):
 
             # Generate Grandpa keys (Ed25519)
             grandpa_result = SUBSTRATE.run_command(
-                ["key", "generate", "--scheme", "Ed25519"]
+                ["key", "generate", "--scheme", "Ed25519"],
+                cwd=f"{node['base_path']}",
             )
-            grandpa = parse_subkey_output(grandpa_result.stdout)
+            grandpa = parse_subkey_output(grandpa_result["stdout"])
             node["grandpa-public-key"] = grandpa["public_key"]
             node["grandpa-private-key"] = grandpa["secret"]
             node["grandpa-secret-phrase"] = grandpa["secret_phrase"]
@@ -97,9 +107,10 @@ def generate_keys(account_key_type: AccountKeyType):
                 node["validator-accountid20-public-key"] = validator["ethereum_address"]
             else:
                 validator_result = SUBSTRATE.run_command(
-                    ["key", "generate", "--scheme", "Sr25519"]
+                    ["key", "generate", "--scheme", "Sr25519"],
+                    cwd=f"{node['base_path']}",
                 )
-                validator = parse_subkey_output(validator_result.stdout)
+                validator = parse_subkey_output(validator_result["stdout"])
                 node["validator-accountid32-private-key"] = validator["secret"]
                 node["validator-accountid32-public-key"] = validator["public_key"]
                 node["validator-accountid32-ss58"] = validator["ss58_address"]
@@ -274,16 +285,15 @@ def init_bootnodes_chainspec(chainspec: Chainspec, config: CliConfig) -> Chainsp
     c = chainspec.load_json()  # In-memory chainspec buffer
     if isinstance(chainspec.value, ChainspecType):
         console.print(f"[dim]Generating new [{chainspec}] chainspec...[/dim]")
-        c = json.loads(
-            SUBSTRATE.run_command(
-                [
-                    "build-spec",
-                    "--chain",
-                    str(chainspec),
-                    "--disable-default-bootnode",
-                ],
-                cwd=ROOT_DIR,
-            ).stdout
+        c = SUBSTRATE.run_command(
+            [
+                "build-spec",
+                "--chain",
+                str(chainspec),
+                "--disable-default-bootnode",
+            ],
+            cwd=ROOT_DIR,
+            json=True,
         )
 
     # Set bootnodes
@@ -315,29 +325,37 @@ def init_bootnodes_chainspec(chainspec: Chainspec, config: CliConfig) -> Chainsp
 
 
 def generate_raw_chainspec(chainspec_path: Path) -> Path:
-    """Generate raw chainspec with rich output"""
     console.print(Panel.fit("[bold cyan]Generating raw chainspec[/bold cyan]"))
 
     raw_chainspec_path = os.path.join(ROOT_DIR, "raw_chainspec.json")
     with console.status("[cyan]Building raw chainspec...[/cyan]"):
-        result = SUBSTRATE.run_command(
-            [
-                "build-spec",
-                "--chain",
-                chainspec_path,
-                "--raw",
-            ],
-            cwd=ROOT_DIR,
-        )
-        if result.returncode != 0:
-            console.print("[bold red]Failed to generate raw chainspec[/bold red]")
-            console.print(f"[red]Error: {result.stderr.strip()}[/red]")
-            raise Exception(
-                f"Failed to generate raw chainspec: {result.stderr.strip()}"
+        if SUBSTRATE.is_docker:
+            # Use just the filename for Docker, since ROOT_DIR is mounted
+            chainspec_filename = os.path.basename(chainspec_path)
+            result = SUBSTRATE.run_command(
+                [
+                    "build-spec",
+                    "--chain",
+                    chainspec_filename,
+                    "--raw",
+                ],
+                cwd=ROOT_DIR,
+                json=True,
+            )
+        else:
+            result = SUBSTRATE.run_command(
+                [
+                    "build-spec",
+                    "--chain",
+                    chainspec_path,
+                    "--raw",
+                ],
+                cwd=ROOT_DIR,
+                json=True,
             )
 
         with open(raw_chainspec_path, "w") as f:
-            f.write(result.stdout)
+            f.write(json.dumps(result, indent=2))
 
     console.print(
         Panel.fit(
@@ -346,134 +364,6 @@ def generate_raw_chainspec(chainspec_path: Path) -> Path:
         )
     )
     return raw_chainspec_path
-
-
-# def display_network_status():
-#     """Show network status with rich table"""
-#     console.print(
-#         Panel.fit(
-#             "[bold green]🚀 Network is running![/bold green]",
-#             subtitle="[dim]Press [bold yellow]Ctrl+C[/bold yellow] to stop[/dim]",
-#         )
-#     )
-
-#     table = Table(title="Node Information", show_lines=True)
-#     table.add_column("Node", style="cyan", justify="center")
-#     table.add_column("Log File", style="magenta")
-#     table.add_column("Explorer Link", style="green")
-
-#     for node in NODES:
-#         log_path = os.path.join(ROOT_DIR, node["name"], f"{node['name']}.log")
-#         explorer_link = f"https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A{node['rpc-port']}#/explorer"
-#         table.add_row(
-#             node["name"], log_path, f"[link={explorer_link}]{explorer_link}[/link]"
-#         )
-
-#     console.print(table)
-
-
-# def stop_network(node_procs: list):
-#     """Stop network with rich progress"""
-#     print("\n")  # To make space for interrupt
-#     console.print(Panel.fit("[bold red]🛑 Stopping network[/bold red]"))
-
-#     with Progress() as progress:
-#         task = progress.add_task("[cyan]Stopping nodes...", total=len(NODES))
-
-#         for node in node_procs:
-#             cleanup_node(node)
-#             progress.update(task, advance=1)
-
-#     console.print("[bold green]✓ All nodes stopped successfully[/bold green]")
-
-
-# def start_network(config: CliConfig):
-#     """Start network with rich output"""
-#     console.print(
-#         Panel.fit(
-#             f"[bold cyan]Starting network with {len(NODES)} nodes[/bold cyan]",
-#             subtitle="[dim]This may take a moment...[/dim]",
-#         )
-#     )
-#     node_procs = []
-#     start_messages = []  # Store messages here
-
-#     with Progress() as progress:
-#         task = progress.add_task("[cyan]Starting nodes...", total=len(NODES))
-
-#         for i, node in enumerate(NODES):
-#             cmd = [
-#                 SUBSTRATE,
-#                 "--base-path",
-#                 node["name"],
-#                 "--chain",
-#                 config.raw_chainspec,
-#                 "--port",
-#                 str(node["p2p-port"]),
-#                 "--rpc-port",
-#                 str(node["rpc-port"]),
-#                 "--validator",
-#                 "--name",
-#                 node["name"],
-#                 "--node-key-file",
-#                 f"{node['name']}/{node['name']}-node-private-key",
-#                 "--rpc-cors",
-#                 "all",
-#                 "--prometheus-port",
-#                 str(node["prometheus-port"]),
-#             ]
-
-#             log_file = open(f"{ROOT_DIR}/{node['name']}/{node['name']}.log", "w")
-#             err_log_file = open(
-#                 f"{ROOT_DIR}/{node['name']}/{node['name']}.error.log", "w"
-#             )
-
-#             p = subprocess.Popen(
-#                 cmd, stdout=err_log_file, stderr=log_file, cwd=ROOT_DIR
-#             )
-#             node_procs.append(
-#                 {
-#                     "process": p,
-#                     "log_file": log_file,
-#                     "err_log_file": err_log_file,
-#                     "name": node["name"],
-#                 }
-#             )
-
-#             progress.update(
-#                 task, advance=1, description=f"[cyan]Starting {node['name']}..."
-#             )
-#             # Store the message instead of printing immediately
-#             start_messages.append(
-#                 f"\t[dim]Started {node['name']} (PID: [yellow]{p.pid}[/yellow])[/dim]"
-#             )
-#         progress.update(
-#             task,
-#             description="[bold green]✓ All nodes started successfully[/bold green]",
-#         )
-
-#     # Print all collected messages after the progress bar finishes
-#     for msg in start_messages:
-#         console.print(msg, soft_wrap=True)
-
-#     display_network_status()
-#     try:
-#         while True:
-#             time.sleep(1.5)
-#     except KeyboardInterrupt:
-#         stop_network(node_procs)
-
-
-# def cleanup_node(node_proc: dict):
-#     """Cleanup node process and log files"""
-#     node_proc["process"].terminate()
-#     try:
-#         node_proc["process"].wait(timeout=2)
-#     except subprocess.TimeoutExpired:
-#         node_proc["process"].kill()
-#         node_proc["process"].wait()
-#     node_proc["log_file"].close()
-#     node_proc["err_log_file"].close()
 
 
 def main():

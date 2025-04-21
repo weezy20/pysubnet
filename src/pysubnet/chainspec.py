@@ -100,16 +100,16 @@ class Chainspec(BaseModel):
 
     def get_chainid_with(self, substrate: Substrate) -> str:
         """Get the chain ID directly from a generated chainspec file."""
-        c = json.loads(
-            substrate.run_command(
-                [
-                    "build-spec",
-                    "--chain",
-                    str(self),
-                    "--disable-default-bootnode",
-                ],
-            ).stdout
+        c = substrate.run_command(
+            [
+                "build-spec",
+                "--chain",
+                str(self),
+                "--disable-default-bootnode",
+            ],
+            json=True,
         )
+
         chain_id = c.get("id")
         if not chain_id:
             raise ValueError(
