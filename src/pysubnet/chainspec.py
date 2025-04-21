@@ -6,6 +6,7 @@ from typing import Union, Optional
 from pydantic import BaseModel, field_validator
 
 from pysubnet.helpers.process import run_command
+from pysubnet.helpers.substrate import Substrate
 
 
 class ChainspecType(str, Enum):
@@ -97,12 +98,11 @@ class Chainspec(BaseModel):
 
         raise ValueError("Invalid chainspec value")
 
-    def get_chainid_with(self, bin: Path) -> str:
+    def get_chainid_with(self, substrate: Substrate) -> str:
         """Get the chain ID directly from a generated chainspec file."""
         c = json.loads(
-            run_command(
+            substrate.run_command(
                 [
-                    bin,
                     "build-spec",
                     "--chain",
                     str(self),
@@ -113,7 +113,7 @@ class Chainspec(BaseModel):
         chain_id = c.get("id")
         if not chain_id:
             raise ValueError(
-                f"Chain ID not found in generated chainspec with binary: {bin} using chainspec: {self}"
+                f"Chain ID not found in generated chainspec with binary: {substrate.source} using chainspec: {self}"
             )
         return chain_id
 

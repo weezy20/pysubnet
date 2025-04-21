@@ -1,7 +1,7 @@
 from pathlib import Path
 from pprint import pprint
 from typing import Dict, List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationInfo
 import json
 import pydantic
 import tomli
@@ -60,8 +60,9 @@ class PySubnetConfig(BaseModel):
     nodes: List[NodeConfig]
 
     @pydantic.model_validator(mode="after")
-    def validate_unique_node_attributes(cls, values):
+    def validate_unique_node_attributes(cls, values, info: ValidationInfo):
         nodes = values.nodes if values.nodes else []
+        skip_same_port_validation = info.context and info.context.get("skip_port_validation", True)
         if nodes:
             seen_names = set()
             seen_rpc_ports = set()
@@ -71,6 +72,8 @@ class PySubnetConfig(BaseModel):
             for node in nodes:
                 if node.name in seen_names:
                     raise ValueError(f"Duplicate node name found: {node.name}")
+                if skip_same_port_validation:
+                    continue
                 if node.rpc_port in seen_rpc_ports:
                     raise ValueError(f"Duplicate rpc-port found: {node.rpc_port}")
                 if node.p2p_port in seen_p2p_ports:
@@ -88,7 +91,7 @@ class PySubnetConfig(BaseModel):
         return values
 
 
-def load_config(config_file_path: Path) -> PySubnetConfig:
+def load_config(config_file_path: Path, ctx: Optional[Dict]) -> PySubnetConfig:
     """Load and parse a config file, returning a PySubnetConfig object."""
 
     def _parse_config_file(config_file_path: Path):
@@ -104,7 +107,7 @@ def load_config(config_file_path: Path) -> PySubnetConfig:
             raise ValueError(f"Invalid config file syntax: {e}")
 
     raw_data = _parse_config_file(config_file_path)
-    return PySubnetConfig.model_validate(raw_data)
+    return PySubnetConfig.model_validate(raw_data, context=ctx)
 
 
 def load_nodes_from_config(pysubnet_config: PySubnetConfig) -> List[Dict]:
