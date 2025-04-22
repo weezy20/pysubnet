@@ -150,6 +150,7 @@ class Substrate:
         self.config = SubstrateType(source=source)
         self.running_nodes = []  # For use with BIN
         self.running_containers = []  # For use with DOCKER
+        self.docker_network = None  
         self.open_files = []  # For log and log.error files
 
     @property
@@ -367,17 +368,25 @@ class Substrate:
         self._display_network_status(config)
 
     def _start_network_containers(self, config: "CliConfig"):
-        """Start network using Docker containers"""
+        """Start network using Docker containers in a dedicated bridge network"""
         client = docker.from_env()
         start_messages = []
 
+        # Create a dedicated network for the substrate nodes
+        network_name = (
+            f"pysubnet_{int(time.time())}"  # Unique network name with timestamp
+        )
+        self.docker_network = client.networks.create(network_name, driver="bridge")
         with Progress() as progress:
             task = progress.add_task("[cyan]Starting nodes...", total=len(config.nodes))
 
             for node in config.nodes:
                 # Ensure node directory exists
                 os.makedirs(f"{config.root_dir}/{node['name']}", exist_ok=True)
+
+                # Use default ports inside container (will be mapped to host ports)
                 P2P_DEFAULT, RPC_DEFAULT, PROM_DEFAULT = 30333, 9944, 9615
+
                 container = client.containers.run(
                     self.source,
                     command=[
@@ -396,15 +405,16 @@ class Substrate:
                         f"/data/{node['name']}-node-private-key",
                         "--rpc-cors",
                         "all",
+                        "--rpc-external",
                         "--prometheus-port",
                         str(PROM_DEFAULT),
                     ],
                     detach=True,
                     remove=True,
                     ports={
-                        f"{P2P_DEFAULT}/tcp": node["p2p-port"],
-                        f"{RPC_DEFAULT}/tcp": node["rpc-port"],
-                        f"{PROM_DEFAULT}/tcp": node["prometheus-port"],
+                        f"{P2P_DEFAULT}/tcp": str(node["p2p-port"]),
+                        f"{RPC_DEFAULT}/tcp": str(node["rpc-port"]),
+                        f"{PROM_DEFAULT}/tcp": str(node["prometheus-port"]),
                     },
                     volumes={
                         os.path.join(config.root_dir, node["name"]): {
@@ -417,20 +427,43 @@ class Substrate:
                         },
                     },
                     name=node["name"],
+                    network=network_name,
+                    hostname=node["name"],  # Set container hostname to node name
                 )
 
                 self.running_containers.append(container)
                 progress.update(
                     task, advance=1, description=f"[cyan]Starting {node['name']}..."
                 )
+
+                # Get the container's IP in the bridge network
+                container.reload()  # Refresh container data to get network info
+                network_info = container.attrs["NetworkSettings"]["Networks"][
+                    network_name
+                ]
+                container_ip = network_info["IPAddress"]
+
                 start_messages.append(
-                    f"\t[dim]Started {node['name']} (Container ID: [yellow]{container.id[:12]}[/yellow])[/dim]"
+                    f"\t[dim]Started {node['name']} (Container ID: [yellow]{container.id[:12]}[/yellow])[/dim]\n"
+                    f"\t  [dim]Host RPC: [green]ws://127.0.0.1:{node['rpc-port']}[/green][/dim]\n"
+                    f"\t  [dim]Container RPC: [green]ws://{container_ip}:{RPC_DEFAULT}[/green][/dim]"
                 )
 
             progress.update(
                 task,
                 description="[bold green]✓ All nodes started successfully[/bold green]",
             )
+
+        # Display network connection information
+        console.print(
+            Panel.fit(
+                f"[bold]Docker Network:[/bold] [green]{network_name}[/green]\n"
+                "[dim]You can connect to nodes using either:[/dim]\n"
+                "- [green]Host ports[/green] (ws://127.0.0.1:PORT) from your machine\n"
+                "- [green]Container IPs[/green] from other containers in the same network",
+                title="Connection Information",
+            )
+        )
 
         for msg in start_messages:
             console.print(msg, soft_wrap=True)
