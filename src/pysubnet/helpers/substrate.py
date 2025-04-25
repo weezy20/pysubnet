@@ -375,12 +375,19 @@ class Substrate:
 
         # Create a dedicated network for the substrate nodes
         ipam_cfg = IPAMConfig(pool_configs=[IPAMPool(subnet=config.docker_subnet)])
-        network_name = (
-            f"pysubnet_{int(time.time())}"  # Unique network name with timestamp
-        )
+        network_name = "pysubnet_docker"
+
+        # Remove the network if it already exists (cleanup from previous runs)
+        try:
+            existing_network = client.networks.get(network_name)
+            existing_network.remove()
+        except docker.errors.NotFound:
+            pass
+
         self.docker_network = client.networks.create(
             name=network_name, ipam=ipam_cfg, driver="bridge"
         )
+
         with Progress() as progress:
             task = progress.add_task("[cyan]Starting nodes...", total=len(config.nodes))
 
@@ -416,11 +423,13 @@ class Substrate:
                         f"/data/{node['name']}-node-private-key",
                         "--rpc-cors",
                         "all",
+                        "--rpc-methods=unsafe",
+                        "--rpc-external",
                         "--prometheus-port",
                         str(PROM_DEFAULT),
                     ],
                     detach=True,
-                    remove=False, # Handle stoppage using _stop_network_containers
+                    remove=False,  # Handle stoppage using _stop_network_containers
                     ports={
                         f"{P2P_DEFAULT}/tcp": str(node["p2p-port"]),
                         f"{RPC_DEFAULT}/tcp": str(node["rpc-port"]),
@@ -493,8 +502,8 @@ class Substrate:
             Panel.fit(
                 f"[bold]Docker Network:[/bold] [green]{network_name}[/green]\n"
                 "[dim]You can connect to nodes using either:[/dim]\n"
-                "- [green]Host ports[/green] (ws://127.0.0.1:PORT) from your machine\n"
-                "- [green]Container IPs[/green] from other containers in the same network",
+                "- [green]Host ports[/green] (ws://127.0.0.1:{PORT}) from your machine\n"
+                f"- [green]Container IPs[/green] from other containers in the same network - {config.docker_subnet}",
                 title="Connection Information",
             )
         )
@@ -517,6 +526,7 @@ class Substrate:
             for container in self.running_containers:
                 try:
                     container.stop()
+                    container.remove()
                     progress.update(task, advance=1)
                 except Exception as e:
                     console.print(
