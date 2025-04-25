@@ -297,10 +297,17 @@ def init_bootnodes_chainspec(chainspec: Chainspec, config: CliConfig) -> Chainsp
         )
 
     # Set bootnodes
-    c["bootNodes"] = [
-        f"/ip4/127.0.0.1/tcp/{n['p2p-port']}/p2p/{n['libp2p-public-key']}"
-        for n in NODES
-    ]
+    if config.substrate.is_bin:
+        c["bootNodes"] = [
+            f"/ip4/127.0.0.1/tcp/{n['p2p-port']}/p2p/{n['libp2p-public-key']}"
+            for n in NODES
+        ]
+    elif config.substrate.is_docker:
+        c["bootNodes"] = [
+            f"/ip4/{n['docker-ip']}/tcp/{30333}/p2p/{n['libp2p-public-key']}"
+            for n in NODES
+        ]
+
     chainspec_path = os.path.join(ROOT_DIR, "chainspec.json")
 
     if config.apply_chainspec_customizations:

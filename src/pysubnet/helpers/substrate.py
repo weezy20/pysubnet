@@ -150,7 +150,7 @@ class Substrate:
         self.config = SubstrateType(source=source)
         self.running_nodes = []  # For use with BIN
         self.running_containers = []  # For use with DOCKER
-        self.docker_network = None  
+        self.docker_network = None
         self.open_files = []  # For log and log.error files
 
     @property
@@ -371,18 +371,29 @@ class Substrate:
         """Start network using Docker containers in a dedicated bridge network"""
         client = docker.from_env()
         start_messages = []
+        from docker.types import IPAMConfig, IPAMPool
 
         # Create a dedicated network for the substrate nodes
+        ipam_cfg = IPAMConfig(pool_configs=[IPAMPool(subnet=config.docker_subnet)])
         network_name = (
             f"pysubnet_{int(time.time())}"  # Unique network name with timestamp
         )
-        self.docker_network = client.networks.create(network_name, driver="bridge")
+        self.docker_network = client.networks.create(
+            name=network_name, ipam=ipam_cfg, driver="bridge"
+        )
         with Progress() as progress:
             task = progress.add_task("[cyan]Starting nodes...", total=len(config.nodes))
 
             for node in config.nodes:
                 # Ensure node directory exists
                 os.makedirs(f"{config.root_dir}/{node['name']}", exist_ok=True)
+                log_file = os.path.abspath(
+                    f"{config.root_dir}/{node['name']}/{node['name']}.log"
+                )
+                err_log_file = os.path.abspath(
+                    f"{config.root_dir}/{node['name']}/{node['name']}.error.log"
+                )
+                self.open_files.extend([log_file, err_log_file])
 
                 # Use default ports inside container (will be mapped to host ports)
                 P2P_DEFAULT, RPC_DEFAULT, PROM_DEFAULT = 30333, 9944, 9615
@@ -405,12 +416,11 @@ class Substrate:
                         f"/data/{node['name']}-node-private-key",
                         "--rpc-cors",
                         "all",
-                        "--rpc-external",
                         "--prometheus-port",
                         str(PROM_DEFAULT),
                     ],
                     detach=True,
-                    remove=True,
+                    remove=False, # Handle stoppage using _stop_network_containers
                     ports={
                         f"{P2P_DEFAULT}/tcp": str(node["p2p-port"]),
                         f"{RPC_DEFAULT}/tcp": str(node["rpc-port"]),
@@ -432,6 +442,30 @@ class Substrate:
                 )
 
                 self.running_containers.append(container)
+
+                # Open log files for writing
+                log_file_handle = open(log_file, "w")
+                err_log_file_handle = open(err_log_file, "w")
+                self.open_files.extend([log_file_handle, err_log_file_handle])
+
+                # Start a background thread to stream logs
+                import threading
+
+                def stream_container_logs(container, log_handle, err_handle):
+                    for line in container.logs(
+                        stream=True, stdout=True, stderr=True, follow=True
+                    ):
+                        # Docker combines stdout and stderr unless you split them
+                        # Here, just write all logs to log_handle
+                        log_handle.write(line.decode())
+                        log_handle.flush()
+
+                threading.Thread(
+                    target=stream_container_logs,
+                    args=(container, log_file_handle, err_log_file_handle),
+                    daemon=True,
+                ).start()
+
                 progress.update(
                     task, advance=1, description=f"[cyan]Starting {node['name']}..."
                 )
@@ -470,23 +504,6 @@ class Substrate:
 
         self._display_network_status(config)
 
-    def _stop_network_bin(self):
-        """Stop network running as local processes"""
-        print()
-        console.print(Panel.fit("[bold red]🛑 Stopping network[/bold red]"))
-
-        with Progress() as progress:
-            task = progress.add_task(
-                "[cyan]Stopping nodes...", total=len(self.running_nodes)
-            )
-
-            for node_proc in self.running_nodes:
-                self._cleanup_node(node_proc)
-                progress.update(task, advance=1)
-
-        console.print("[bold green]✓ All nodes stopped successfully[/bold green]")
-        self.running_nodes = []
-
     def _stop_network_containers(self):
         """Stop network running as Docker containers"""
         print()
@@ -505,9 +522,39 @@ class Substrate:
                     console.print(
                         f"[red]Error stopping container {container.name}: {e}[/red]"
                     )
-
+            # Close all open log file handles
+            for file in self.open_files:
+                try:
+                    file.close()
+                except Exception:
+                    pass
+            self.open_files = []
+        # Remove the dedicated Docker network if it was created
+        if self.docker_network is not None:
+            try:
+                self.docker_network.remove()
+            except Exception as e:
+                console.print(f"[red]Error removing Docker network: {e}[/red]")
+            self.docker_network = None
         console.print("[bold green]✓ All containers stopped successfully[/bold green]")
         self.running_containers = []
+
+    def _stop_network_bin(self):
+        """Stop network running as local processes"""
+        print()
+        console.print(Panel.fit("[bold red]🛑 Stopping network[/bold red]"))
+
+        with Progress() as progress:
+            task = progress.add_task(
+                "[cyan]Stopping nodes...", total=len(self.running_nodes)
+            )
+
+            for node_proc in self.running_nodes:
+                self._cleanup_node(node_proc)
+                progress.update(task, advance=1)
+
+        console.print("[bold green]✓ All nodes stopped successfully[/bold green]")
+        self.running_nodes = []
 
     def _cleanup_node(self, node_proc: Dict[str, Any]):
         """Cleanup node process and log files"""
