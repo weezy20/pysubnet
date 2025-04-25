@@ -282,11 +282,19 @@ class Substrate:
         table = Table(title="Node Information", show_lines=True)
         table.add_column("Node", style="cyan", justify="center")
         table.add_column("Log File", style="magenta")
-        table.add_column("Explorer Link", style="green", no_wrap=False)
+        table.add_column("Explorer Link", style="green")
 
         for node in config.nodes:
+            # Determine if config.root_dir is in the current working directory
+            cwd = os.getcwd()
+            abs_root_dir = os.path.abspath(config.root_dir)
+            if abs_root_dir.startswith(cwd):
+                root_dir_display = os.path.basename(abs_root_dir)
+            else:
+                root_dir_display = abs_root_dir
+
             log_path = os.path.join(
-                config.root_dir, node["name"], f"{node['name']}.log"
+                root_dir_display, node["name"], f"{node['name']}.log"
             )
             explorer_link = f"https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A{node['rpc-port']}#/explorer"
             table.add_row(
