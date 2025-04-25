@@ -85,7 +85,7 @@ def edit_vs_ss_authorities(
 
 
 def inject_validator_balances(
-    data, # In memory chainspec data
+    data,  # In memory chainspec data
     NODES: list[dict],
     account_key_type: AccountKeyType,
     removeExisting=False,
@@ -134,20 +134,28 @@ def enable_poa(chainspec: str, config: CliConfig):
     Additionally apply customizations from the config file if customizations are enabled.
     """
     data = load_chainspec(chainspec)
-    # Add PoA specific configurations
-    aura_authorities = []
-    gran_authorities = []
-    for node in config.nodes:
-        entry_aura = node["aura-ss58"]
-        aura_authorities.append(entry_aura)
-        entry_grandpa = [node["grandpa-ss58"], 1]
-        gran_authorities.append(entry_grandpa)
+    try:
+        # Add PoA specific configurations
+        aura_authorities = []
+        gran_authorities = []
+        for node in config.nodes:
+            entry_aura = node["aura-ss58"]
+            aura_authorities.append(entry_aura)
+            entry_grandpa = [node["grandpa-ss58"], 1]
+            gran_authorities.append(entry_grandpa)
 
-    data["genesis"]["runtimeGenesis"]["patch"]["aura"]["authorities"] = aura_authorities
-    data["genesis"]["runtimeGenesis"]["patch"]["grandpa"]["authorities"] = (
-        gran_authorities
-    )
-    apply_config_customizations(data, config)
+        data["genesis"]["runtimeGenesis"]["patch"]["aura"]["authorities"] = (
+            aura_authorities
+        )
+        data["genesis"]["runtimeGenesis"]["patch"]["grandpa"]["authorities"] = (
+            gran_authorities
+        )
+        apply_config_customizations(data, config)
+    except KeyError as e:
+        print(
+            f"KeyError: {e}. Please ensure the node and chainspec has the correct structure for PoA."
+        )
+        return
     # Write the modified data back to the original file
     write_chainspec(chainspec, data)
 

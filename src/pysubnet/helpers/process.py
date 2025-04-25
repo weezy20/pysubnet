@@ -1,3 +1,4 @@
+import re
 import subprocess
 
 
@@ -24,3 +25,28 @@ def parse_subkey_output(output):
         "ss58_address": output.split("Public key (SS58):")[1].split()[0].strip(),
         "account_id": output.split("Account ID:")[1].split()[0].strip(),
     }
+
+def is_valid_public_key(key: str) -> bool:
+    """
+    Checks if a string matches the format of a Substrate public key
+    (0x followed by 64 hexadecimal characters).
+
+    Args:
+        key: The key string to validate.
+
+    Returns:
+        True if the string is a valid public key format, False otherwise.
+    """
+    # Regex breakdown:
+    # ^      - Matches the start of the string.
+    # 0x     - Matches the literal characters "0x".
+    # [0-9a-fA-F] - Matches a single hexadecimal character (0-9, a-f, A-F).
+    # {64}   - Matches the previous element exactly 64 times.
+    # $      - Matches the end of the string.
+    pattern = r"^0x[0-9a-fA-F]{64}$"
+
+    # re.fullmatch checks if the entire string matches the pattern
+    if re.fullmatch(pattern, key):
+        return True
+    else:
+        return False
