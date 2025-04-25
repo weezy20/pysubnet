@@ -282,7 +282,7 @@ class Substrate:
         table = Table(title="Node Information", show_lines=True)
         table.add_column("Node", style="cyan", justify="center")
         table.add_column("Log File", style="magenta")
-        table.add_column("Explorer Link", style="green")
+        table.add_column("Explorer Link", style="green", no_wrap=False)
 
         for node in config.nodes:
             log_path = os.path.join(

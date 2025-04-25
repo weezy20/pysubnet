@@ -147,7 +147,7 @@ def parse_args() -> CliConfig:
         config.chainspec = Chainspec(value=args.chainspec)
         config.apply_chainspec_customizations = False
 
-    if config.substrate.is_docker:
+    if config.substrate is not None and config.substrate.is_docker:
         for node in config.nodes:
             # Assign a unique Docker IP to each node in the subnet
             # TODO: This only updates the final octet, needs more sophisticated handling for various subnets
