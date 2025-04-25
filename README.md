@@ -71,8 +71,8 @@ uv pip install git+https://github.com/weezy20/pysubnet.git
 ## 🚀 Usage
 
 ### ✅ Pre-requisites
-- **Substrate Binary** (required):  
-    A compiled Substrate binary. By default, pysubnet looks for a binary named `substrate`. If your binary has a different name or is located elsewhere, you can specify its path using the `--bin` flag.
+- **Substrate Binary or Docker Image** (required):  
+    A compiled Substrate binary. By default, pysubnet looks for a binary named `substrate`. If your binary has a different name or is located elsewhere, you can specify its path using the `--bin` flag. If using a docker image make sure your image has the node as the entrypoint. `--docker substrate:latest` as an example
 
 - **Chainspec File** (optional):  
     A `chainspec.json` file can be provided as a base template for your network configuration.
