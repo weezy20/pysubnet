@@ -100,7 +100,7 @@ A developer might create a substrate node with their custom chainspec edits in t
 ```sh
 pysubnet -c # (clean existing root-dir if present) 
          -r # (invoke start_network())
-         --bin <custom bin> # (provide a custom bin)
+         --bin <custom bin> # (provide a custom bin) # Or --docker <image>:tag
 ``` 
 ---
 
