@@ -62,7 +62,9 @@ class PySubnetConfig(BaseModel):
     @pydantic.model_validator(mode="after")
     def validate_unique_node_attributes(cls, values, info: ValidationInfo):
         nodes = values.nodes if values.nodes else []
-        skip_same_port_validation = info.context and info.context.get("skip_port_validation", True)
+        skip_same_port_validation = info.context and info.context.get(
+            "skip_port_validation", True
+        )
         if nodes:
             seen_names = set()
             seen_rpc_ports = set()

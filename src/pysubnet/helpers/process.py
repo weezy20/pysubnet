@@ -26,6 +26,7 @@ def parse_subkey_output(output):
         "account_id": output.split("Account ID:")[1].split()[0].strip(),
     }
 
+
 def is_valid_public_key(key: str) -> bool:
     """
     Checks if a string matches the format of a Substrate public key

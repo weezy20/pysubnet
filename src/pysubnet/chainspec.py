@@ -4,8 +4,6 @@ from pathlib import Path
 from enum import Enum
 from typing import Union, Optional
 from pydantic import BaseModel, field_validator
-
-from pysubnet.helpers.process import run_command
 from pysubnet.helpers.substrate import Substrate
 
 
