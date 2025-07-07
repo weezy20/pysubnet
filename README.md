@@ -37,6 +37,8 @@ PySubnet is a **beginner-friendly tool** that automates the complex process of s
 ### **Option 1: Install with uv pip (Recommended)**
 ```bash
 uv pip install pysubnet
+# or install it as a tool
+uv tool install pysubnet
 ```
 
 ### **Option 2: Latest from GitHub**
