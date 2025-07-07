@@ -160,6 +160,59 @@ def enable_poa(chainspec: str, config: CliConfig):
     write_chainspec(chainspec, data)
 
 
+def enable_poa_with_validator_set(chainspec: str, config: CliConfig):
+    """
+    Enhanced PoA configuration that includes AURA + GRANDPA authorities
+    plus ValidatorSet and Sessions configuration.
+    This ensures compatibility with substrate-validator-set and session pallets.
+    """
+    # First, apply the validator set and sessions configuration
+    edit_vs_ss_authorities(chainspec, config.nodes, config.account_key_type)
+
+    # Load the chainspec to add AURA and GRANDPA authorities
+    data = load_chainspec(chainspec)
+
+    try:
+        # Add AURA and GRANDPA authorities (essential for consensus)
+        aura_authorities = []
+        gran_authorities = []
+
+        for node in config.nodes:
+            entry_aura = node["aura-ss58"]
+            aura_authorities.append(entry_aura)
+            entry_grandpa = [node["grandpa-ss58"], 1]
+            gran_authorities.append(entry_grandpa)
+
+        # Ensure AURA and GRANDPA authorities are set
+        data["genesis"]["runtimeGenesis"]["patch"]["aura"]["authorities"] = aura_authorities
+        data["genesis"]["runtimeGenesis"]["patch"]["grandpa"]["authorities"] = gran_authorities
+
+        # Check if tokenDecimals is defined, if not use 18 decimals as default
+        tokenDecimals = data["properties"].get("tokenDecimals", 18)
+
+        # Set validator balances
+        inject_validator_balances(
+            data,
+            config.nodes,
+            config.account_key_type,
+            removeExisting=True,  # Remove existing balances
+            amount=5234,  # Balance amount
+            tokenDecimals=tokenDecimals,
+        )
+
+        # Apply any config customizations
+        apply_config_customizations(data, config)
+
+    except KeyError as e:
+        print(
+            f"KeyError: {e}. Please ensure the chainspec has the correct structure for PoA with ValidatorSet."
+        )
+        return
+
+    # Write the modified data back to the original file
+    write_chainspec(chainspec, data)
+
+
 def custom_network_config(chainspec: str, config: CliConfig):
     """
     Modify the chainspec for custom network configuration.

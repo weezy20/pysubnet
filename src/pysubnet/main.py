@@ -18,7 +18,6 @@ from .helpers import (
     parse_subkey_output,
 )
 from .accounts import AccountKeyType
-from .chainspec_handlers import custom_network_config, enable_poa
 from .cli import parse_args, CliConfig
 from .ethereum import generate_ethereum_keypair
 
@@ -370,6 +369,53 @@ def generate_raw_chainspec(chainspec_path: Path) -> Path:
     return raw_chainspec_path
 
 
+def configure_network_consensus(chainspec: str, config: CliConfig):
+    """
+    Configure the network consensus mechanism with clear options for the user.
+    Presents options for PoA and PoA + ValidatorSet + Sessions configurations.
+    """
+    from .chainspec_handlers import enable_poa, enable_poa_with_validator_set
+    
+    if INTERACTIVE and not config.poa:
+        console.print(
+            Panel.fit(
+                "[bold cyan]Network Consensus Configuration[/bold cyan]\n"
+                "[dim]Choose your consensus mechanism setup[/dim]"
+            )
+        )
+        
+        console.print("\n[bold]Available options:[/bold]")
+        console.print(
+            "  [bold cyan]1. PoA (Basic)[/bold cyan] - [green]Insert authorities to AURA + GRANDPA[/green]\n"
+            "    [dim]Standard Proof-of-Authority setup with basic Aura and Grandpa consensus[/dim]"
+        )
+        console.print(
+            "  [bold cyan]2. PoA + ValidatorSet + Sessions[/bold cyan] - [yellow]Insert authorities to AURA, GRANDPA, Sessions, and ValidatorSet genesis[/yellow]\n"
+            "    [dim]Advanced setup with validator set management and session handling[/dim]"
+        )
+        
+        choice = Prompt.ask(
+            "\nSelect consensus configuration",
+            choices=["1", "2"],
+            default="1"
+        )
+        
+        if choice == "1":
+            console.print("[green]✓ Configuring basic PoA (AURA + GRANDPA)[/green]")
+            enable_poa(chainspec, config)
+        else:
+            console.print("[yellow]✓ Configuring PoA + ValidatorSet + Sessions[/yellow]")
+            enable_poa_with_validator_set(chainspec, config)
+    else:
+        # Non-interactive mode or config.poa is set
+        if config.poa:
+            console.print("[green]✓ Configuring basic PoA (AURA + GRANDPA)[/green]")
+            enable_poa(chainspec, config)
+        else:
+            console.print("[yellow]✓ Configuring PoA + ValidatorSet + Sessions[/yellow]")
+            enable_poa_with_validator_set(chainspec, config)
+
+
 def main():
     config = parse_args()
     global INTERACTIVE, RUN_NETWORK, ROOT_DIR, SUBSTRATE, CHAINSPEC, NODES
@@ -497,22 +543,8 @@ def main():
     # Modified chainspec with bootnodes inserted
     chainspec = init_bootnodes_chainspec(CHAINSPEC, config)
 
-    if INTERACTIVE and not config.poa:
-        proceed = Confirm.ask(
-            "Proceed with standard Aura/Grandpa authorities injection? (Proof-of-Authority)?\n"
-            "[dim]Select no if you're using a custom setup defined in custom_network_config()\n[/dim]"
-            "[dim]Yes -> Enable POA (standard) | No -> Custom setup [/dim]",
-            default=True,
-        )
-        if proceed:
-            enable_poa(chainspec, config)
-        else:
-            custom_network_config(chainspec, config)
-    else:
-        if config.poa:
-            enable_poa(chainspec, config)
-        else:
-            custom_network_config(chainspec, config)
+    # Configure network consensus mechanism
+    configure_network_consensus(chainspec, config)
 
     # Generate raw chainspec
     config.raw_chainspec = generate_raw_chainspec(chainspec)
