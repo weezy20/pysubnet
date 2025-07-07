@@ -258,3 +258,231 @@ def apply_config_customizations(data, config: CliConfig):
             tokenDecimals=tokenDecimals,
             includeNodeBalances=True,
         )
+
+
+def enable_babe_grandpa(chainspec: str, config: CliConfig):
+    """
+    Inject BABE and GRANDPA authorities into the chainspec for production consensus.
+    BABE (Blind Assignment for Blockchain Extension) is more suitable for larger validator sets.
+    """
+    data = load_chainspec(chainspec)
+    try:
+        # Add BABE specific configurations
+        babe_authorities = []
+        gran_authorities = []
+
+        for node in config.nodes:
+            # BABE authorities use the BABE keys
+            entry_babe = [node["babe-ss58"], 1]  # [authority_id, weight]
+            babe_authorities.append(entry_babe)
+
+            # GRANDPA authorities remain the same
+            entry_grandpa = [node["grandpa-ss58"], 1]
+            gran_authorities.append(entry_grandpa)
+
+        data["genesis"]["runtimeGenesis"]["patch"]["babe"]["authorities"] = babe_authorities
+        data["genesis"]["runtimeGenesis"]["patch"]["grandpa"]["authorities"] = gran_authorities
+
+        # BABE specific configuration - set epoch duration (in blocks)
+        if "epochDuration" not in data["genesis"]["runtimeGenesis"]["patch"]["babe"]:
+            data["genesis"]["runtimeGenesis"]["patch"]["babe"]["epochDuration"] = 2400  # ~4 hours with 6s blocks
+
+        apply_config_customizations(data, config)
+
+    except KeyError as e:
+        print(
+            f"KeyError: {e}. Please ensure the chainspec has the correct structure for BABE + GRANDPA."
+        )
+        return
+
+    # Write the modified data back to the original file
+    write_chainspec(chainspec, data)
+
+
+def enable_babe_grandpa_with_staking(chainspec: str, config: CliConfig):
+    """
+    BABE + GRANDPA configuration with staking pallet and sessions.
+    This is the standard Substrate production setup used in polkadot-sdk.
+    Uses the staking pallet instead of substrate-validator-set for validator management.
+    """
+    data = load_chainspec(chainspec)
+    
+    try:
+        # Add BABE and GRANDPA authorities (essential for consensus)
+        babe_authorities = []
+        gran_authorities = []
+        
+        for node in config.nodes:
+            entry_babe = [node["babe-ss58"], 1]  # [authority_id, weight]
+            babe_authorities.append(entry_babe)
+            entry_grandpa = [node["grandpa-ss58"], 1]
+            gran_authorities.append(entry_grandpa)
+
+        # Set BABE and GRANDPA authorities
+        data["genesis"]["runtimeGenesis"]["patch"]["babe"]["authorities"] = babe_authorities
+        data["genesis"]["runtimeGenesis"]["patch"]["grandpa"]["authorities"] = gran_authorities
+        
+        # BABE specific configuration
+        if "epochDuration" not in data["genesis"]["runtimeGenesis"]["patch"]["babe"]:
+            data["genesis"]["runtimeGenesis"]["patch"]["babe"]["epochDuration"] = 2400
+        
+        # Configure sessions with BABE keys
+        configure_sessions_for_staking(data, config.nodes, config.account_key_type)
+        
+        # Configure staking pallet
+        configure_staking_genesis(data, config.nodes, config.account_key_type)
+        
+        # Check if tokenDecimals is defined, if not use 18 decimals as default
+        tokenDecimals = data["properties"].get("tokenDecimals", 18)
+        
+        # Set validator balances (they need enough tokens to stake)
+        inject_validator_balances(
+            data,
+            config.nodes,
+            config.account_key_type,
+            removeExisting=True,
+            amount=100000,  # Higher amount for staking (100k tokens)
+            tokenDecimals=tokenDecimals,
+        )
+        
+        apply_config_customizations(data, config)
+        
+    except KeyError as e:
+        print(
+            f"KeyError: {e}. Please ensure the chainspec has the correct structure for BABE + GRANDPA + Staking."
+        )
+        return
+    
+    # Write the modified data back to the original file
+    write_chainspec(chainspec, data)
+
+
+def configure_sessions_for_staking(data, NODES: list[dict], account_key_type: AccountKeyType):
+    """
+    Configure sessions pallet for staking-based validator management.
+    Sets up session keys with BABE instead of AURA.
+    """
+    genesis = data["genesis"]["runtimeGenesis"]["patch"]
+    if "session" not in genesis:
+        genesis["session"] = {}
+    
+    session = genesis["session"]
+    session["keys"] = []
+    vkey = account_key_type.get_vkey()
+    
+    # Insert session keys with BABE
+    for node in NODES:
+        entry_sessions = [
+            node[vkey],  # validator account
+            node[vkey],  # session account (can be the same)
+            {"babe": node["babe-ss58"], "grandpa": node["grandpa-ss58"]},
+        ]
+        session["keys"].append(entry_sessions)
+
+
+def configure_staking_genesis(data, NODES: list[dict], account_key_type: AccountKeyType):
+    """
+    Configure staking pallet genesis with initial validators and their stakes.
+    This is the standard setup for production Substrate networks.
+    """
+    genesis = data["genesis"]["runtimeGenesis"]["patch"]
+    if "staking" not in genesis:
+        genesis["staking"] = {}
+    
+    staking = genesis["staking"]
+    vkey = account_key_type.get_vkey()
+    
+    # Set staking configuration
+    stake_amount = 10000 * (10 ** 18)  # 10k tokens with 18 decimals
+    
+    # Initialize validators and nominators
+    staking["validatorCount"] = len(NODES)
+    staking["minimumValidatorCount"] = max(1, len(NODES) // 2)  # At least half need to be online
+    staking["invulnerables"] = []  # No invulnerable validators initially
+    staking["forceEra"] = "NotForcing"
+    staking["slashRewardFraction"] = 1000000000  # 10% in perbill (10^9 = 100%)
+    staking["canceledSlashPayout"] = 1000000000  # 10% in perbill
+    staking["historyDepth"] = 336  # ~1.4 days with 6s blocks (84 eras)
+    
+    # Set up initial validators with their stakes
+    staking["stakers"] = []
+    for node in NODES:
+        validator_entry = [
+            node[vkey],  # validator account
+            node[vkey],  # controller account (same as validator for simplicity)
+            stake_amount,  # stake amount
+            "Validator"   # staker type
+        ]
+        staking["stakers"].append(validator_entry)
+
+
+def edit_babe_vs_ss_authorities(
+    chainspec: str, NODES: list[dict], account_key_type: AccountKeyType
+):
+    """
+    Handler to edit a chainspec with BABE + substrate-validator-set pallet + pallet-sessions.
+    Similar to edit_vs_ss_authorities but uses BABE instead of AURA for session keys.
+    """
+    data = load_chainspec(chainspec)
+    genesis = data["genesis"]["runtimeGenesis"]["patch"]
+    session = genesis["session"]
+    validatorSet = genesis["validatorSet"]
+
+    # Remove existing keys
+    session["keys"] = []
+    validatorSet["initialValidators"] = []
+    vkey = account_key_type.get_vkey()
+
+    # Insert keys into pallet-sessions with BABE
+    for node in NODES:
+        # Make entry for pallet-sessions with BABE instead of AURA
+        entry_sessions = [
+            node[vkey],
+            node[vkey],
+            {"babe": node["babe-ss58"], "grandpa": node["grandpa-ss58"]},
+        ]
+        session["keys"].append(entry_sessions)
+
+        # Make entry for substrate-validator-set pallet
+        entry_validatorSet = node[vkey]
+        validatorSet["initialValidators"].append(entry_validatorSet)
+
+    # Write the modified data back to the original file
+    write_chainspec(chainspec, data)
+
+
+def enable_dev_mode(chainspec: str, config: CliConfig):
+    """
+    Configure chainspec for development mode with instant finality.
+    Uses only the first node as a single authority.
+    """
+    data = load_chainspec(chainspec)
+
+    try:
+        # Use only the first node for development
+        first_node = config.nodes[0]
+
+        # Set single authority for both AURA and GRANDPA
+        data["genesis"]["runtimeGenesis"]["patch"]["aura"]["authorities"] = [
+            first_node["aura-ss58"]
+        ]
+        data["genesis"]["runtimeGenesis"]["patch"]["grandpa"]["authorities"] = [
+            [first_node["grandpa-ss58"], 1]
+        ]
+
+        # Set development mode specific configurations
+        if "properties" not in data:
+            data["properties"] = {}
+        data["properties"]["isEthereum"] = False
+
+        # Apply config customizations
+        apply_config_customizations(data, config)
+
+    except (KeyError, IndexError) as e:
+        print(
+            f"Error: {e}. Please ensure at least one node is configured for development mode."
+        )
+        return
+
+    # Write the modified data back to the original file
+    write_chainspec(chainspec, data)

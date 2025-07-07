@@ -1,199 +1,184 @@
 
----
+# PySubnet
 
-# PySubnet 
-### Quick & easy mutli-node substrate network setup
+[![PyPI version](https://badge.fury.io/py/pysubnet.svg)](https://badge.fury.io/py/pysubnet) [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/) [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-yellow.svg)](https://opensource.org/licenses/Apache-2.0)
 
+### **The easiest way to /develop/deploy/test a multi-node substrate network**
 
 ![PySubnet](docs/assets/pysubnet.png)
 
+---
 
-## 🔧 Description
+## 🚀 **What is PySubnet?**
 
-**PySubnet** automates the process generating, inserting and updating chainspecs for multi-node setups. Like:
+PySubnet is a **beginner-friendly tool** that automates the complex process of setting up multi-node Substrate blockchain networks. Whether you're a blockchain developer learning Substrate or deploying production networks, PySubnet handles all the tedious setup work for you.
 
-- Generating **Aura** and **Grandpa** keys (or any other keys that you wish to use as session keys).
-- Inserting them into the **keystore** for each node `key insert --base-path ...`
-- Generating **libp2p** node keys to use for running the node using `--node-key-file`.
-- Updating the **chainspec** with bootnodes and starting authority set.
-- Extending chainspec edit process using custom chainspec_handlers defined in [chainspec_handlers.py](./chainspec_handlers.py) file
+### ✨ **What PySubnet Does for You:**
 
-Currently, it supports **Aura + Grandpa** based Substrate chains. You can adapt the logic to support different key types as needed. (See `custom_network_config` for an example with pallet-sessions and substrate-validator-set)
-
-It also supports key generations for AccountIds using built-in subkey in the substrate binary provided or using ECDSA keys generated using the [ethereum](./ethereum.py) module.
+- 🔑 **Generates all cryptographic keys** for your validator authorities (AURA, BABE, GRANDPA)
+- 📁 **Creates proper directory structure** for your network nodes
+- ⚙️ **Prepares a chainspec** with bootnodes and validator keys 
+- 🔗 **Sets up p2p keys** (libp2p keys for bootnodes list)
+- 🏃‍♂️ **Launches your network** with a single command (`-r`)
+- 🎨 **Interactive CLI** with beautiful, colorful output (`-i`)
 
 ---
 
-## 📦 Installation
+## **Crafted For:**
 
-### 🔌 Using `pip`:
+- **Blockchain Developers** learning the Substrate framework with multi-node setups
+- **DevOps Teams** for managing multiple sets of keys for separate nodes
+- **Rapid Prototyping** of blockchain applications
 
-```sh
-pip install pysubnet
+---
+
+## 📦 **Installation**
+
+### **Option 1: Install with uv pip (Recommended)**
+```bash
+uv pip install pysubnet
 ```
-Or get the latest version from github:
 
-```sh
+### **Option 2: Latest from GitHub**
+```bash
 pip install git+https://github.com/weezy20/pysubnet.git
 ```
-Or run it without installing anything using `pipx` or `uvx`:
-### ⚡ Using `uv` by [astral.sh](https://docs.astral.sh/uv/) (recommended):
-```sh
+
+### **Option 3: Run without installing (using uvx)**
+```bash
 uvx git+https://github.com/weezy20/pysubnet.git
 ```
 
-Or create a virutalenv with `python >=3.10` and install it inside it using pip, uv, etc.
+> **💡 Tip:** If you get Python header errors during installation:
+> - **Ubuntu/Debian**: `sudo apt install python3-dev`
+> - **RHEL/Fedora**: `sudo dnf install python3-devel`
+> - **macOS**: `xcode-select --install`
 
-```sh
-# Create virtualenv with python >=3.10
-python -m venv venv
-source venv/bin/activate 
-# or if using uv
-uv venv test
-source test/.venv/bin/activate
-# Windows: `venv\Scripts\activate`
-```
-Then install it
-```sh
-pip install git+https://github.com/weezy20/pysubnet.git
-# or if using uv
-uv pip install git+https://github.com/weezy20/pysubnet.git
-```
 
-> **Note:** If you're on a system without Python development headers (like `Python.h`), and see missing header errors during install you would need to install them:
->
-> - On **Debian/Ubuntu**, run: `sudo apt install python3-dev`
-> - On **RedHat/Fedora**, run: `sudo dnf install python3-devel`
-> - On **Mac**, make sure Xcode Command Line Tools are installed: `xcode-select --install`
 
----
-
-## 🚀 Usage
-
-### ✅ Pre-requisites
-- **Substrate Binary or Docker Image** (required):  
-    A compiled Substrate binary. By default, pysubnet looks for a binary named `substrate`. If your binary has a different name or is located elsewhere, you can specify its path using the `--bin` flag. If using a docker image make sure your image has the node as the entrypoint. `--docker substrate:latest` as an example
-
-- **Chainspec File** (optional):  
-    A `chainspec.json` file can be provided as a base template for your network configuration.
-
----
-
-### 📦 Basic Command
-
-```sh
+### **Step 2: Run PySubnet**
+```bash
 pysubnet
 ```
-or 
-```sh
-pysubnet -i # Recommended
-```
+*That's it! PySubnet will automatically start in interactive mode and guide you through the setup.*
 
-This uses the default settings:
-- Chainspec: `"dev"`
-- Root directory: `./network`
-- Substrate binary: `./substrate`
+### **Step 3: Choose Your Network Type**
+PySubnet will present you with **5** commonly used consensus options:
 
-You can use all flags with `-i`. The main reason for having flags is to use in non-interactive setups where developers need quick network startup
-A developer might create a substrate node with their custom chainspec edits in the `custom_network_config()` function in [chainspec_handlers.py](./src/pysubnet/chainspec_handlers.py) file and then may run 
-
-```sh
-pysubnet -c # (clean existing root-dir if present) 
-         -r # (invoke start_network())
-         --bin <custom bin> # (provide a custom bin) # Or --docker <image>:tag
-``` 
----
-
-![pysubnet demo](docs/assets/pysubnet.gif)
----
-
-### 📁 Custom Root Directory
-
-```sh
-pysubnet --root ./my_custom_dir
-```
-
-All generated keys, node information, and chain specs will be stored under this directory, and a `pysubnet.json` file will be generated that holds all keys, ports, flags required to run your network:
-```
-<ROOT_DIR>/pysubnet.json
-```
+1. **🟢 PoA (Proof-of-Authority)** - Perfect for learning and simple development
+2. **🟡 PoA + ValidatorSet** - PoA with sessions pallet and [substrate-validator-pallet](https://github.com/web3gautam/substrate-validator-set) for dynamic authority management
+`Note: To use this pallet (substrate-validator-set) it's recommended to clone it locally and add it to your runtime because as of this writing, it's dependecies seem outdated, but its functionality is unaffected` 
+3. **🔵 BABE + GRANDPA** - Production-ready consensus (like Polkadot)
+4. **🟣 BABE + GRANDPA + Staking** - Full production setup with economic security
+5. **🔴 Development Mode** - Single node for rapid development
 
 ---
 
-### 📜 Custom Chainspec
+## 🎮 **Interactive Mode Features**
 
-Pass in your own chainspec file:
+When you run `pysubnet`, it automatically detects if you have a substrate binary and provides:
 
-```sh
-pysubnet --chainspec ./my_chainspec.json
-```
-
-Or use the default embedded options:
-```sh
-pysubnet --chainspec dev # default option equivalent to running without --chainspec flag
-
-```
-or
-```sh
-pysubnet --chainspec local
-```
-`PySubnet` will inject generated bootnodes into the chainspec, and based on one of `custom_network_config()` [Default] or `enable_poa()`[`--poa`] will inject authorities to the genesis. It will then generate a raw_chainspec file and use that to spawn of  the network in `start_network()`
+- 🎨 **Beautiful CLI interface** with colors and progress bars
+- 🤖 **Smart substrate detection** - automatically switches to interactive mode if no binary found
+- ❓ **Helpful prompts** - clear explanations for each option
+- 🔧 **Flexible configuration** - choose exactly what you need
+- 📊 **Real-time feedback** - see your network being built step by step
 
 ---
 
-`-r` or `--run` will invoke `start_network()` to start the network. This will:
 
-- Spawn each node in a separate process.
-- Use the generated keystores and updated chainspec.
-- Write logs to `<node-name>.log` located inside each node's directory.
 
-Generate keys, insert keys, update chainspec, generate raw chainspec and launch the network in one step:
-```sh
-pysubnet -icr # interactive
-or 
-pysubnet -cr # non-interactive
+## 🔧 **Advanced Usage**
+
+### **Non-Interactive Mode**
+```bash
+# Quick setup with defaults
+pysubnet --clean --run
+# Or a shorter version
+pysubnet -cr
+
+# Custom binary location
+pysubnet --bin ./target/release/my-node --run
+
+# Using Docker
+pysubnet --docker substrate:latest --run
+
+# Custom chainspec
+pysubnet --chainspec ./my-chainspec.json --run
 ```
-It's helpful to use `-c` as often you'll be using the same `<ROOT_DIR>`
 
----
+### **Configuration File**
+Create advanced network configurations:
+```bash
+pysubnet --config ./network-config.toml --run
+```
+See [docs/config.md](docs/config.md) for configuration examples.
 
-### 🧑‍⚖️ Enable Proof-of-Authority (PoA) Mode
-
-For Substrate-node-template based chains (Simple Aura+Grandpa session keys), you can enable Proof-of-Authority (PoA) mode, which assigns all authorities equal weight in the chainspec and inserts their Aura-SS58 & Grandpa-SS58 keys. This is useful for testing and development purposes when starting out learning substrate. Also works for `frontier/template` or any node that has a "aura" and "grandpa" in their runtime-genesis["patch"] section.
-]
-as it's same in consensus to the default `substrate-node-template`
-
-```sh
-pysubnet --poa -r 
-# Automates the tutorial "Start a private network with 3 nodes" that used to be in the now gone substrate.io website
+### **Directory Structure**
+PySubnet creates organized directories:
+```
+./network/                    # Default root directory
+├── pysubnet.json            # Network configuration & keys
+├── chainspec.json           # Generated chainspec
+├── raw_chainspec.json       # Raw chainspec for nodes
+├── alice/                   # Node directories
+│   ├── alice-node-private-key
+│   └── chains/<chain folder based on running chainspec>/keystore/
+├── bob/
+└── charlie/
 ```
 
 ---
 
-## 🧾 Full Argument Reference
+## 📊 **Complete Flag Reference**
 
 | Flag | Description | Example |
 |------|-------------|---------|
-| `-i`, `--interactive` | Run in interactive mode | `pysubnet -i` |
-| `--run`, `--start`, `-r` | Launch network after key/chainspec generation | `pysubnet --run` |
-| `--root` | Set custom root directory for network artifacts | `pysubnet --root ./my-net` |
-| `-c`, `--clean` | Clean the root directory before starting | `pysubnet -c` |
-| `--chainspec` | Provide a chainspec file to use as a starter template or use `dev` / `local` | `--chainspec dev` or `--chainspec ./custom.json` |
-| `--config`, `-f` | Pass in a configuration file to customize the generated chainspec. `--chainspec <file>` overrides customizations defined here. See [docs/config.md](docs/config.md)
-| `--bin` | Path to Substrate binary | `--bin ./target/release/node-template` |
-| `--account` | AccountId type to use for ValidatorId, "ecdsa" or "sr25519" | `--account ecdsa` or `--account sr25519"` |
-| `--poa` | Enable POA. Absence of this flag branches code into `custom_network_config` which is user defined | `pysubnet --poa --run` |
+| `-i`, `--interactive` | Force interactive mode (default when no substrate binary) | `pysubnet -i` |
+| `-r`, `--run` | Launch network after setup | `pysubnet -r` |
+| `-c`, `--clean` | Clean existing network directory | `pysubnet -c` |
+| `--root` | Custom network directory | `--root ./my-network` |
+| `--bin` | Path to substrate binary | `--bin ./substrate` |
+| `--docker` | Use Docker image | `--docker substrate:latest` |
+| `--chainspec` | Base chainspec (`dev`, `local`, or file path) | `--chainspec dev` |
+| `--config` | Network configuration file | `--config ./config.toml` |
+| `--account` | Account type (`ecdsa` or `sr25519`) | `--account ecdsa` |
+| `--poa` | Force basic PoA mode (bypass interactive selection) | `--poa` |
 
 ---
 
-## 🧠 Notes
+## 🎓 **Learning Resources**
+
+### **New to Substrate?**
+
+The first tutorial on substrate is about running a PoA node with 2 or 3 nodes. You can replicate that entire tutorial with pysubnet by running `pysubnet -icr --poa --bin <your poa enabled node>`.
+
+
+
+---
+
+## 🤝 **Getting Help**
+
+- 🐛 **Issues:** [GitHub Issues](https://github.com/weezy20/pysubnet/issues)
+- 💬 **Discussions:** [GitHub Discussions](https://github.com/weezy20/pysubnet/discussions)
+
+---
 
 - All node data (crypto keys, Account keys, libp2p keys, node IDs) is stored in `pysubnet.json`.
 - The script auto-generates keystores compatible with Substrate’s expected format.
-- You can choose between `AccountId20` or `AccountId32` for your AccountId (validator account keys)
-- Make sure your node uses the same account type as the `--account` you pass to pysubnet. Not doing so will result in a runtime error
-- Chainspecs are automatically modified in-place with new authority and bootnodes + libp2p identity. All editors are defined in [chainspec_handlers.py](./src/pysubnet/chainspec_handlers.py) and inserted before `start_network()` call.
-- Do not pass `-r` if you just want to prepare base-paths for a multi-node network.
-- Sometimes CTRL-C might give you an error. This is because we use a sleep timer for 2 seconds in `main.py` to reduce CPU interuppts. This is easily fixed by tapping CTRL-C in succession.
+## 💡 **Tips & Best Practices**
+
+- **🧹 Always use `--clean/-c`** when restarting development to avoid issues.
+- **📝 Save your pysubnet.json** - After having a proper setup, save this file for your future reference, it contains all your network keys and configuration
+---
+
+## 📈 **What's New in v2.0**
+
+- 🎯 **5 Consensus Options** (upgraded from 2)
+- 🎨 **Enhanced Interactive Mode** with beautiful CLI
+- 🤖 **Smart Binary Detection** with automatic fallback
+- 📦 **Modular Architecture** for easier customization
 
 ---
+
+*Made with ❤️ for the Substrate community*

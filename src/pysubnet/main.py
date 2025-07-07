@@ -85,6 +85,17 @@ def generate_keys(account_key_type: AccountKeyType):
             node["aura-secret-phrase"] = aura["secret_phrase"]
             node["aura-ss58"] = aura["ss58_address"]
 
+            # Generate BABE keys (Sr25519) - for BABE consensus
+            babe_result = SUBSTRATE.run_command(
+                ["key", "generate", "--scheme", "Sr25519"],
+                cwd=f"{node['base_path']}",
+            )
+            babe = parse_subkey_output(babe_result["stdout"])
+            node["babe-public-key"] = babe["public_key"]
+            node["babe-private-key"] = babe["secret"]
+            node["babe-secret-phrase"] = babe["secret_phrase"]
+            node["babe-ss58"] = babe["ss58_address"]
+
             # Generate Grandpa keys (Ed25519)
             grandpa_result = SUBSTRATE.run_command(
                 ["key", "generate", "--scheme", "Ed25519"],
@@ -119,6 +130,9 @@ def generate_keys(account_key_type: AccountKeyType):
                 f"\t[dim]{'Aura public key    (ss58)':<{key_type_width}}[/dim] [green]{node['aura-ss58']:<{value_width}}[/green]"
             )
             console.print(
+                f"\t[dim]{'Babe public key    (ss58)':<{key_type_width}}[/dim] [blue]{node['babe-ss58']:<{value_width}}[/blue]"
+            )
+            console.print(
                 f"\t[dim]{'Grandpa public key (ss58)':<{key_type_width}}[/dim] [yellow]{node['grandpa-ss58']:<{value_width}}[/yellow]"
             )
 
@@ -139,67 +153,96 @@ def generate_keys(account_key_type: AccountKeyType):
     )
 
 
-def insert_keystore(chainspec: Chainspec, alternate=None):
-    """Insert Aura/Grandpa session keys into keystore for a particular Chainspec instance.
+def insert_keystore(chainspec: Chainspec, alternate=None, key_types=None):
+    """Insert session keys into keystore for a particular Chainspec instance.
     Args:
         chainspec (Chainsepc): Instance of Chainspec to use
         alternate (str, optional): Move generated keys to alternate path, a different "chain_id" directory
+        key_types (list, optional): List of key types to insert. Defaults to ['aura', 'grandpa']
     """
+    if key_types is None:
+        key_types = ['aura', 'grandpa']
 
     original_chainid = chainspec.get_chainid_with(SUBSTRATE)
     with Progress() as progress:
         task = progress.add_task(
-            "[cyan]Inserting keys into keystore...", total=len(NODES) * 2
+            "[cyan]Inserting keys into keystore...", total=len(NODES) * len(key_types)
         )
 
         for node in NODES:
-            # Insert AURA keys
-            SUBSTRATE.run_command(
-                [
-                    "key",
-                    "insert",
-                    "--base-path",
-                    node["name"],
-                    "--chain",
-                    str(chainspec),
-                    "--scheme",
-                    "Sr25519",
-                    "--key-type",
-                    "aura",
-                    "--suri",
-                    node["aura-private-key"],
-                ],
-                cwd=ROOT_DIR,
-            )
-            progress.update(
-                task,
-                advance=1,
-                description=f"[cyan]Inserting AURA keys for {node['name']}",
-            )
-
-            # Insert Grandpa Keys
-            SUBSTRATE.run_command(
-                [
-                    "key",
-                    "insert",
-                    "--base-path",
-                    node["name"],
-                    "--chain",
-                    str(chainspec),
-                    "--scheme",
-                    "Ed25519",
-                    "--key-type",
-                    "gran",
-                    "--suri",
-                    node["grandpa-private-key"],
-                ],
-                cwd=ROOT_DIR,
-            )
-            progress.update(
-                task,
-                advance=1,
-                description=f"[cyan]Inserting Grandpa keys for {node['name']}",
-            )
+            for key_type in key_types:
+                if key_type == 'aura':
+                    # Insert AURA keys
+                    SUBSTRATE.run_command(
+                        [
+                            "key",
+                            "insert",
+                            "--base-path",
+                            node["name"],
+                            "--chain",
+                            str(chainspec),
+                            "--scheme",
+                            "Sr25519",
+                            "--key-type",
+                            "aura",
+                            "--suri",
+                            node["aura-private-key"],
+                        ],
+                        cwd=ROOT_DIR,
+                    )
+                    progress.update(
+                        task,
+                        advance=1,
+                        description=f"[cyan]Inserting AURA keys for {node['name']}",
+                    )
+                elif key_type == 'babe':
+                    # Insert BABE keys
+                    SUBSTRATE.run_command(
+                        [
+                            "key",
+                            "insert",
+                            "--base-path",
+                            node["name"],
+                            "--chain",
+                            str(chainspec),
+                            "--scheme",
+                            "Sr25519",
+                            "--key-type",
+                            "babe",
+                            "--suri",
+                            node["babe-private-key"],
+                        ],
+                        cwd=ROOT_DIR,
+                    )
+                    progress.update(
+                        task,
+                        advance=1,
+                        description=f"[cyan]Inserting BABE keys for {node['name']}",
+                    )
+                elif key_type == 'grandpa':
+                    # Insert Grandpa Keys
+                    SUBSTRATE.run_command(
+                        [
+                            "key",
+                            "insert",
+                            "--base-path",
+                            node["name"],
+                            "--chain",
+                            str(chainspec),
+                            "--scheme",
+                            "Ed25519",
+                            "--key-type",
+                            "gran",
+                            "--suri",
+                            node["grandpa-private-key"],
+                        ],
+                        cwd=ROOT_DIR,
+                    )
+                    progress.update(
+                        task,
+                        advance=1,
+                        description=f"[cyan]Inserting Grandpa keys for {node['name']}",
+                    )
     if alternate is not None:
         for node in NODES:
             orginal_keystore = Path(
@@ -372,9 +415,19 @@ def generate_raw_chainspec(chainspec_path: Path) -> Path:
 def configure_network_consensus(chainspec: str, config: CliConfig):
     """
     Configure the network consensus mechanism with clear options for the user.
-    Presents options for PoA and PoA + ValidatorSet + Sessions configurations.
+    Presents options for various consensus mechanisms including PoA, BABE, and development modes.
+    Returns the consensus type and required key types.
     """
-    from .chainspec_handlers import enable_poa, enable_poa_with_validator_set
+    from .chainspec_handlers import (
+        enable_poa, 
+        enable_poa_with_validator_set, 
+        enable_babe_grandpa,
+        enable_babe_grandpa_with_staking,
+        enable_dev_mode
+    )
+    
+    consensus_type = "aura"  # default
+    key_types = ["aura", "grandpa"]  # default
     
     if INTERACTIVE and not config.poa:
         console.print(
@@ -384,36 +437,73 @@ def configure_network_consensus(chainspec: str, config: CliConfig):
             )
         )
         
-        console.print("\n[bold]Available options:[/bold]")
+        console.print("\n[bold]Available consensus options:[/bold]")
         console.print(
-            "  [bold cyan]1. PoA (Basic)[/bold cyan] - [green]Insert authorities to AURA + GRANDPA[/green]\n"
-            "    [dim]Standard Proof-of-Authority setup with basic Aura and Grandpa consensus[/dim]"
+            "  [bold cyan]1. PoA (Basic)[/bold cyan] - [green]AURA + GRANDPA authorities[/green]\n"
+            "    [dim]Standard Proof-of-Authority setup with Aura block production and Grandpa finality[/dim]"
         )
         console.print(
-            "  [bold cyan]2. PoA + ValidatorSet + Sessions[/bold cyan] - [yellow]Insert authorities to AURA, GRANDPA, Sessions, and ValidatorSet genesis[/yellow]\n"
-            "    [dim]Advanced setup with validator set management and session handling[/dim]"
+            "  [bold cyan]2. PoA + ValidatorSet + Sessions[/bold cyan] - [yellow]AURA + GRANDPA + substrate-validator-set pallet[/yellow]\n"
+            "    [dim]Advanced PoA setup with substrate-validator-set pallet for runtime validator management[/dim]"
+        )
+        console.print(
+            "  [bold cyan]3. BABE + GRANDPA[/bold cyan] - [blue]Production-ready consensus[/blue]\n"
+            "    [dim]BABE block production with GRANDPA finality (Polkadot-style consensus)[/dim]"
+        )
+        console.print(
+            "  [bold cyan]4. BABE + GRANDPA + Sessions + Staking[/bold cyan] - [magenta]Standard Substrate production setup[/magenta]\n"
+            "    [dim]Production consensus with staking pallet (standard polkadot-sdk configuration)[/dim]"
+        )
+        console.print(
+            "  [bold cyan]5. Development Mode[/bold cyan] - [red]Single node with instant finality[/red]\n"
+            "    [dim]Fast development setup with no consensus overhead (single validator)[/dim]"
         )
         
         choice = Prompt.ask(
             "\nSelect consensus configuration",
-            choices=["1", "2"],
+            choices=["1", "2", "3", "4", "5"],
             default="1"
         )
         
         if choice == "1":
             console.print("[green]✓ Configuring basic PoA (AURA + GRANDPA)[/green]")
             enable_poa(chainspec, config)
-        else:
+            consensus_type = "aura"
+            key_types = ["aura", "grandpa"]
+        elif choice == "2":
             console.print("[yellow]✓ Configuring PoA + ValidatorSet + Sessions[/yellow]")
             enable_poa_with_validator_set(chainspec, config)
+            consensus_type = "aura_vs"
+            key_types = ["aura", "grandpa"]
+        elif choice == "3":
+            console.print("[blue]✓ Configuring BABE + GRANDPA[/blue]")
+            enable_babe_grandpa(chainspec, config)
+            consensus_type = "babe"
+            key_types = ["babe", "grandpa"]
+        elif choice == "4":
+            console.print("[magenta]✓ Configuring BABE + GRANDPA + Sessions + Staking[/magenta]")
+            enable_babe_grandpa_with_staking(chainspec, config)
+            consensus_type = "babe_staking"
+            key_types = ["babe", "grandpa"]
+        else:  # choice == "5"
+            console.print("[red]✓ Configuring Development Mode[/red]")
+            enable_dev_mode(chainspec, config)
+            consensus_type = "dev"
+            key_types = ["aura", "grandpa"]  # Dev mode still uses basic keys
     else:
         # Non-interactive mode or config.poa is set
         if config.poa:
             console.print("[green]✓ Configuring basic PoA (AURA + GRANDPA)[/green]")
             enable_poa(chainspec, config)
+            consensus_type = "aura"
+            key_types = ["aura", "grandpa"]
         else:
             console.print("[yellow]✓ Configuring PoA + ValidatorSet + Sessions[/yellow]")
             enable_poa_with_validator_set(chainspec, config)
+            consensus_type = "aura_vs"
+            key_types = ["aura", "grandpa"]
+    
+    return consensus_type, key_types
 
 
 def main():
@@ -534,17 +624,19 @@ def main():
                 style="bold yellow",
             )
 
-    if INTERACTIVE:
-        if not Confirm.ask("Keys generated. Proceed to insert?", default=True):
-            console.print("[yellow]Aborting key insertion[/yellow]")
-            return
-    insert_keystore(CHAINSPEC, alternate=customChainId)
-
     # Modified chainspec with bootnodes inserted
     chainspec = init_bootnodes_chainspec(CHAINSPEC, config)
 
     # Configure network consensus mechanism
-    configure_network_consensus(chainspec, config)
+    consensus_type, key_types = configure_network_consensus(chainspec, config)
+
+    # Insert appropriate keys into keystore based on consensus type
+    if INTERACTIVE:
+        if not Confirm.ask("Consensus configured. Proceed to insert keys into keystore?", default=True):
+            console.print("[yellow]Aborting key insertion[/yellow]")
+            return
+    
+    insert_keystore(CHAINSPEC, alternate=customChainId, key_types=key_types)
 
     # Generate raw chainspec
     config.raw_chainspec = generate_raw_chainspec(chainspec)
