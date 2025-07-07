@@ -65,7 +65,6 @@ class SubstrateType(BaseModel):
 
         # Otherwise, expect Docker image name:tag
         elif re.fullmatch(r"[\w./-]+:[\w.-]+", source_ref):
-            console = Console()
             client = docker.from_env()
 
             # Check if image already exists locally

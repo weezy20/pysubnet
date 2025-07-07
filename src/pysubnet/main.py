@@ -414,9 +414,23 @@ def main():
             )
             SUBSTRATE = config.substrate
         elif not INTERACTIVE:
-            console.print("Using default substrate binary path: ./substrate")
-            config.substrate = Substrate(os.path.join(os.getcwd(), "substrate"))
-            SUBSTRATE = config.substrate
+            # Check if default substrate binary exists before trying to create Substrate instance
+            default_substrate_path = os.path.join(os.getcwd(), "substrate")
+            if os.path.exists(default_substrate_path) and os.access(default_substrate_path, os.X_OK):
+                console.print("Using default substrate binary path: ./substrate")
+                config.substrate = Substrate(default_substrate_path)
+                SUBSTRATE = config.substrate
+            else:
+                console.print("[yellow]⚠ Substrate binary not found at ./substrate[/yellow]")
+                console.print("[cyan]Switching to interactive mode...[/cyan]")
+                config.substrate = Substrate(
+                    Prompt.ask(
+                        "Path to substrate binary or <docker image>:<tag>",
+                        default="./substrate",
+                        show_default=True,
+                    )
+                )
+                SUBSTRATE = config.substrate
 
     # Interactive mode for account type
     match (config.account_key_type, INTERACTIVE):
