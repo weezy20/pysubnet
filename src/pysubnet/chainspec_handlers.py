@@ -149,7 +149,7 @@ def inject_validator_balances(
                 console.print("❌ [red]Token decimals must be between 0 and 30. Using default 18.[/red]")
                 tokenDecimals = 18
             
-            console.print(f"✅ [green]Using {tokenDecimals} token decimals[/green]")
+            console.print(f"[dim]Using {tokenDecimals} token decimals[/dim]")
             # Update the chainspec properties
             data["properties"]["tokenDecimals"] = tokenDecimals
         except KeyboardInterrupt:
@@ -182,7 +182,7 @@ def inject_validator_balances(
                 final_balance,
             ]
             balances.append(entry)
-            print(f"✅ {node[vkey]} --> {current_amount} tokens ({final_balance:,} units)")
+            console.print(f"[dim]{node[vkey]} --> {current_amount} tokens ({final_balance:,} units)[/dim]")
     data["genesis"]["runtimeGenesis"]["patch"]["balances"]["balances"] = balances
 
 
@@ -308,6 +308,11 @@ def apply_config_customizations(data, config: CliConfig):
             tokenDecimals or 18
         )  # Neither defined in chainspec or config -- unlikely but we cover it
         data["properties"]["tokenSymbol"] = tokenSymbol or "DOT"  # same as above
+        
+        # Set ss58Format if specified in chain config
+        if network.chain.number is not None:
+            data["properties"]["ss58Format"] = network.chain.number
+        
         inject_validator_balances(
             data,
             config.nodes,
@@ -616,7 +621,7 @@ def inject_config_balances(data, config: CliConfig):
                 console.print("❌ [red]Token decimals must be between 0 and 30. Using default 18.[/red]")
                 tokenDecimals = 18
             
-            console.print(f"✅ [green]Using {tokenDecimals} token decimals[/green]")
+            console.print(f"[dim]Using {tokenDecimals} token decimals[/dim]")
             # Update the chainspec properties
             data["properties"]["tokenDecimals"] = tokenDecimals
         except KeyboardInterrupt:
@@ -650,7 +655,7 @@ def inject_config_balances(data, config: CliConfig):
             # Add to balances
             entry = [final_address, final_balance]
             balances.append(entry)
-            print(f"✅ {final_address} --> {balance_amount} tokens ({final_balance:,} units)")
+            console.print(f"[dim]{final_address} --> {balance_amount} tokens ({final_balance:,} units)[/dim]")
 
     # Process SS58 addresses (SR25519)
     if balance_config.ss58:
@@ -668,7 +673,52 @@ def inject_config_balances(data, config: CliConfig):
             # Add to balances - SS58 addresses can be used directly
             entry = [address, final_balance]
             balances.append(entry)
-            print(f"✅ {address} --> {balance_amount} tokens ({final_balance:,} units)")
+            console.print(f"[dim]{address} --> {balance_amount} tokens ({final_balance:,} units)[/dim]")
 
     # Update the balances in the data
     data["genesis"]["runtimeGenesis"]["patch"]["balances"]["balances"] = balances
+
+
+def display_chain_customizations(config: CliConfig, chainspec_data):
+    """
+    Display applied chain customizations in a neat box format.
+    """
+    if not config.apply_chainspec_customizations or not config.network:
+        return
+    
+    customizations = []
+    network = config.network
+    properties = chainspec_data.get("properties", {})
+    
+    # Token symbol
+    if "tokenSymbol" in properties:
+        customizations.append(f"Token Symbol: [bold cyan]{properties['tokenSymbol']}[/bold cyan]")
+    
+    # Token decimals
+    if "tokenDecimals" in properties:
+        customizations.append(f"Token Decimals: [bold cyan]{properties['tokenDecimals']}[/bold cyan]")
+    
+    # SS58 Format
+    if "ss58Format" in properties:
+        customizations.append(f"SS58 Format: [bold cyan]{properties['ss58Format']}[/bold cyan]")
+    
+    # Chain properties
+    if network.chain:
+        customizations.append(f"Chain Name: [bold cyan]{network.chain.chain_name}[/bold cyan]")
+        customizations.append(f"Chain ID: [bold cyan]{network.chain.chain_id}[/bold cyan]")
+        customizations.append(f"Chain Type: [bold cyan]{network.chain.chain_type}[/bold cyan]")
+    
+    # Balance removal
+    if network.remove_existing_balances:
+        customizations.append("[yellow]Existing balances removed[/yellow]")
+    
+    if customizations:
+        content = "\n".join(customizations)
+        console.print(
+            Panel(
+                content,
+                title="[bold]Chain Customizations Applied[/bold]",
+                border_style="green",
+                padding=(0, 1)
+            )
+        )

@@ -12,6 +12,7 @@ from rich.prompt import Confirm, Prompt
 
 from pysubnet.chainspec import Chainspec, ChainspecType
 from pysubnet.helpers.substrate import Substrate
+from pysubnet.chainspec_handlers import display_chain_customizations
 
 from .helpers import (
     l2_seg,
@@ -367,6 +368,10 @@ def init_bootnodes_chainspec(chainspec: Chainspec, config: CliConfig) -> Chainsp
             subtitle=f"[dim]{l2_seg(chainspec_path)}[/dim]",
         )
     )
+    
+    # Display chain customizations after chainspec generation
+    display_chain_customizations(config, c)
+    
     return chainspec_path
 
 

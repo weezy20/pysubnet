@@ -6,7 +6,8 @@
       "chain": {
         "name": "My Awesome Network",
         "chain-id": "my_local",
-        "chain-type": "Live"
+        "chain-type": "Live",
+        "number": 42
       }
     },
     "nodes": [

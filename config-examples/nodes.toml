@@ -7,6 +7,7 @@ remove-existing-balances = true # Removes existing balances in the genesis block
 name = "My Awesome Network" # Name for your network
 chain-id = "my_chain"             # machine identifiable identifier for the chain
 chain-type = "Live"               # ChainType, one of Live, Development, Local or Custom(String) https://docs.rs/sp-chain-spec/3.0.0/sp_chain_spec/enum.ChainType.html
+number = 42                       # SS58 format number (0+) - sets ss58Format in chainspec properties
 
 [[nodes]]
 name = "elizabeth"

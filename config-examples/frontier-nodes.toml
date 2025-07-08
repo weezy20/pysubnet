@@ -1,8 +1,12 @@
 [network]
-name = "testnet"
-chain = "local"
 token-symbol = "TST"
 token-decimal = 12
+
+[network.chain]
+name = "testnet"
+chain-id = "local"
+chain-type = "Local"
+number = 42  # SS58 format number (0+) - sets ss58Format in chainspec properties
 
 # For bootstrapping frontier-based chains
 [frontier.evm.accounts]

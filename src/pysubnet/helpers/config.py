@@ -23,6 +23,8 @@ class ChainConfig(BaseModel):
     chain_name: str = Field(..., alias="name")
     chain_id: str = Field(..., alias="chain-id")
     chain_type: str = Field(..., alias="chain-type")
+    number: Optional[int] = Field(None, alias="number", ge=0)
+    """SS58 format number (0+) to be set as ss58Format in chainspec properties"""
 
 
 class BalanceConfig(BaseModel):

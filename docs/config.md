@@ -6,7 +6,7 @@ The main purpose of this file is to define your nodes and additionally, specify 
 
 Additionally, this file can also do some chainspec customizations for you if you're not passing in `--chainspec` which declares that you intend to override the chainspec defined in the `network` section of this file.
 
-Supported items are `tokenSymbol`, `tokenDecimals` and additionally `frontier.evm.accounts` and `frontier.evm.chainId` for frontier-based chains. Take a look at [frontier-nodes](../config-examples/frontier-nodes.json) for an example. 
+Supported items are `tokenSymbol`, `tokenDecimals`, `ss58Format` (via `network.chain.number`), and additionally `frontier.evm.accounts` and `frontier.evm.chainId` for frontier-based chains. Take a look at [frontier-nodes](../config-examples/frontier-nodes.json) for an example. 
 
 See [config-examples](../config-examples/nodes.toml) for what's possible
 
@@ -41,6 +41,7 @@ remove-existing-balances = true # Removes existing balances in the genesis block
 name = "My Awesome Network" # Name for your network
 chain-id = "my_local"             # machine identifiable identifier for the chain
 chain-type = "Live"               # ChainType, one of Live, Development, Local or Custom(String) https://docs.rs/sp-chain-spec/3.0.0/sp_chain_spec/enum.ChainType.html
+number = 42                       # SS58 format number (0+) - sets ss58Format in chainspec properties
 
 [[nodes]]
 name = "elizabeth"
@@ -76,7 +77,8 @@ prometheus-port = 9616
       "chain": {
         "name": "My Awesome Network",
         "chain-id": "my_local",
-        "chain-type": "Live"
+        "chain-type": "Live",
+        "number": 42
       }
     },
     "nodes": [
@@ -166,6 +168,40 @@ For example:
 - If `token-decimal = 18` and you specify `1000` tokens
 - The actual balance will be `1000 * 10^18` in the smallest unit
 
+
+You can set the SS58 format for your chainspec using the `number` field in the chain configuration:
+
+```toml
+[network.chain]
+number = 42  # Sets ss58Format to 42 in chainspec properties
+```
+
+```json
+{
+  "network": {
+    "chain": {
+      "number": 42
+    }
+  }
+}
+```
+- Common examples:
+  - `0`: Polkadot
+  - `2`: Kusama  
+  - `42`: Generic Substrate (commonly used for testing)
+  - `5`: Astar
+
+When specified, this will set the `ss58Format` property in your chainspec's `properties` section:
+
+```json
+{
+  "properties": {
+    "ss58Format": 42,
+    "tokenSymbol": "TST",
+    "tokenDecimals": 12
+  }
+}
+```
 
 
 ## Frontier Configuration (Experimental)

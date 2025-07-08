@@ -1,5 +1,10 @@
 # Changelog
 
+### v2.2.1
+- Handle null tokenDecimals when used with non-null balances
+- Add support for balances using either hex or ss58 addresses
+- Add support for injecting ss58 chainId (number) into chainspec. Not to be confused with chain-id which is a string value for chain directory.
+
 ## v2.0.0
 
 ### 🚀 **Major Features**
