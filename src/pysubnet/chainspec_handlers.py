@@ -286,6 +286,13 @@ def enable_babe_grandpa(chainspec: str, config: CliConfig):
         # BABE specific configuration - set epoch duration (in blocks)
         if "epochDuration" not in data["genesis"]["runtimeGenesis"]["patch"]["babe"]:
             data["genesis"]["runtimeGenesis"]["patch"]["babe"]["epochDuration"] = 2400  # ~4 hours with 6s blocks
+        
+        # BABE epoch configuration - required for proper BABE consensus
+        if "epochConfig" not in data["genesis"]["runtimeGenesis"]["patch"]["babe"]:
+            data["genesis"]["runtimeGenesis"]["patch"]["babe"]["epochConfig"] = {
+                "allowed_slots": "PrimaryAndSecondaryPlainSlots",
+                "c": [1, 4]
+            }
 
         apply_config_customizations(data, config)
 
@@ -325,6 +332,13 @@ def enable_babe_grandpa_with_staking(chainspec: str, config: CliConfig):
         # BABE specific configuration
         if "epochDuration" not in data["genesis"]["runtimeGenesis"]["patch"]["babe"]:
             data["genesis"]["runtimeGenesis"]["patch"]["babe"]["epochDuration"] = 2400
+        
+        # BABE epoch configuration - required for proper BABE consensus
+        if "epochConfig" not in data["genesis"]["runtimeGenesis"]["patch"]["babe"]:
+            data["genesis"]["runtimeGenesis"]["patch"]["babe"]["epochConfig"] = {
+                "allowed_slots": "PrimaryAndSecondaryPlainSlots",
+                "c": [1, 4]
+            }
         
         # Configure sessions with BABE keys
         configure_sessions_for_staking(data, config.nodes, config.account_key_type)
