@@ -104,6 +104,70 @@ prometheus-port = 9616
   }
 ```
 
+# Balance Injection Configuration
+
+This feature allows you to inject custom balances for specific addresses into your chainspec through the configuration file. This is useful for funding specific accounts, smart contracts, or testing scenarios.
+
+## Configuration Format
+
+### TOML Format
+
+```toml
+[network.balances]
+
+# Hex addresses (ECDSA) - both with and without 0x prefix work
+[network.balances.hex]
+"f24FF3a9CF04c71Dbc94D0b566f7A27B94566cac" = 1000
+"0x25451a4de12dccc2d166922fa938e900fcc4ed24" = 2000
+
+# SS58 addresses (SR25519)
+[network.balances.ss58]
+"5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY" = 5000
+"5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty" = 3000
+```
+
+### JSON Format
+
+```json
+{
+  "network": {
+    "balances": {
+      "hex": {
+        "f24FF3a9CF04c71Dbc94D0b566f7A27B94566cac": 1000,
+        "0x25451a4de12dccc2d166922fa938e900fcc4ed24": 2000
+      },
+      "ss58": {
+        "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY": 5000,
+        "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty": 3000
+      }
+    }
+  }
+}
+```
+
+## Address Types
+
+### Hex Addresses (ECDSA)
+- Used for Ethereum-compatible accounts
+- Can be specified with or without the `0x` prefix
+- Must be exactly 40 hexadecimal characters (20 bytes)
+- Examples: `f24FF3a9CF04c71Dbc94D0b566f7A27B94566cac` or `0xf24FF3a9CF04c71Dbc94D0b566f7A27B94566cac`
+
+### SS58 Addresses (SR25519)
+- Used for Substrate-native accounts
+- Standard Substrate address format
+- Typically 47-48 characters long using base58 encoding
+- Example: `5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY`
+
+
+Balance amounts are specified in token units (not the smallest denomination). The system automatically multiplies by the token decimals specified in your configuration.
+
+For example:
+- If `token-decimal = 18` and you specify `1000` tokens
+- The actual balance will be `1000 * 10^18` in the smallest unit
+
+
+
 ## Frontier Configuration (Experimental)
 
 Configuration files like `frontier-nodes.toml` and `frontier-nodes.json` demonstrate how you might structure genesis data for Frontier-based chains, specifically for setting initial EVM account balances and the EVM chain ID.

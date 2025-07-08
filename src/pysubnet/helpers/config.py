@@ -6,6 +6,7 @@ import json
 import pydantic
 import tomli
 import sys
+import re
 
 
 # class ChainTypeEnum(Enum):
@@ -24,15 +25,63 @@ class ChainConfig(BaseModel):
     chain_type: str = Field(..., alias="chain-type")
 
 
+class BalanceConfig(BaseModel):
+    """
+    Balance configuration for injecting custom balances into the chainspec.
+    Supports both hex (ECDSA) and SS58 (SR25519) address formats.
+    """
+    
+    hex: Optional[Dict[str, int]] = Field(default_factory=dict)
+    """Hex addresses (ECDSA) with their balance amounts in token units."""
+    
+    ss58: Optional[Dict[str, int]] = Field(default_factory=dict)
+    """SS58 addresses (SR25519) with their balance amounts in token units."""
+
+    def normalize_hex_addresses(self) -> Dict[str, int]:
+        """
+        Normalize hex addresses by ensuring they all start with '0x'.
+        Returns a dict with normalized addresses.
+        """
+        normalized = {}
+        if not self.hex:
+            return normalized
+            
+        for address, balance in self.hex.items():
+            # Remove any existing 0x prefix and add it back
+            clean_address = address.lower().replace('0x', '')
+            normalized_address = f'0x{clean_address}'
+            normalized[normalized_address] = balance
+            
+        return normalized
+
+    def validate_hex_address(self, address: str) -> bool:
+        """
+        Validate that a hex address is a valid ECDSA address format.
+        Should be 40 hex characters (20 bytes) optionally prefixed with 0x.
+        """
+        clean_address = address.lower().replace('0x', '')
+        return bool(re.match(r'^[0-9a-f]{40}$', clean_address))
+
+    def validate_ss58_address(self, address: str) -> bool:
+        """
+        Basic validation for SS58 address format.
+        SS58 addresses start with specific characters and have a checksum.
+        """
+        # Basic check - SS58 addresses are typically 47-48 characters long
+        # and contain alphanumeric characters (base58)
+        return bool(re.match(r'^[1-9A-HJ-NP-Za-km-z]{47,48}$', address))
+
+
 class NetworkConfig(BaseModel):
     """
     Chainspec customizations loaded from a config file
     """
 
     chain: ChainConfig = Field(..., alias="chain")
-    token_symbol: str = Field(..., alias="token-symbol", min_length=1, max_length=12)
-    token_decimal: int = Field(..., alias="token-decimal")
+    token_symbol: Optional[str] = Field(None, alias="token-symbol", min_length=1, max_length=12)
+    token_decimal: Optional[int] = Field(None, alias="token-decimal")
     remove_existing_balances: bool = Field(False, alias="remove-existing-balances")
+    balances: Optional[BalanceConfig] = Field(default_factory=BalanceConfig, alias="balances")
 
 
 class NodeConfig(BaseModel):
@@ -136,7 +185,7 @@ if __name__ == "__main__":
         raise FileNotFoundError(f"File not found: {config_file_path}")
 
     try:
-        config = load_config(config_file_path)
+        config = load_config(config_file_path, ctx=None)
         print("Nodes:")
         pprint([node.model_dump() for node in config.nodes])
         print("Network:")
