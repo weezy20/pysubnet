@@ -3,9 +3,11 @@
 
 [![PyPI version](https://badge.fury.io/py/pysubnet.svg)](https://badge.fury.io/py/pysubnet) [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/) [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-yellow.svg)](https://opensource.org/licenses/Apache-2.0)
 
-### **The easiest way to /develop/deploy/test a multi-node substrate network**
+<p align="center">
+    <img src="docs/assets/pysubnet.png" alt="PySubnet" width="100" height="100" style="vertical-align:middle; margin-right: 16px;" />
+    <span style="font-size:1.25em; vertical-align:middle;"><strong>The easiest way to <u>develop</u>/<u>deploy</u>/<u>test</u> a multi-node substrate network</strong></span>
+</p>
 
-![PySubnet](docs/assets/pysubnet.png)
 
 ---
 
