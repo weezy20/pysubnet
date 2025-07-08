@@ -9,7 +9,7 @@ misc/
 
 # Virtual environments
 .venv
-substrate
+substrate*
 pysubnet.json
 chainspec.json
 network/
