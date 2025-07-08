@@ -28,3 +28,6 @@ p2p-port = 30336
 rpc-port = 9946
 prometheus-port = 9616
 # balance not specified, so will get 0 balance
+
+[network.balances.hex]
+"0xf24ff3a9cf04c71dbc94d0b566f7a27b94566cac" = 1000
