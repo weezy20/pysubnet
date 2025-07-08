@@ -258,6 +258,8 @@ def apply_config_customizations(data, config: CliConfig):
             tokenDecimals=tokenDecimals,
             includeNodeBalances=True,
         )
+        # Inject custom balances from config file
+        inject_config_balances(data, config)
 
 
 def enable_babe_grandpa(chainspec: str, config: CliConfig):
@@ -500,3 +502,65 @@ def enable_dev_mode(chainspec: str, config: CliConfig):
 
     # Write the modified data back to the original file
     write_chainspec(chainspec, data)
+
+
+def inject_config_balances(data, config: CliConfig):
+    """
+    Inject custom balances from config file into the chainspec.
+    Supports both hex (ECDSA) and SS58 (SR25519) address formats.
+    Validates addresses and provides warnings for invalid ones.
+    """
+    if not config.network or not config.network.balances:
+        return
+
+    balance_config = config.network.balances
+    balances = data["genesis"]["runtimeGenesis"]["patch"]["balances"]["balances"]
+    tokenDecimals = data["properties"].get("tokenDecimals", 18)
+    unit = 10 ** tokenDecimals
+
+    # Print colored warnings
+    def print_warning(message):
+        print(f"\033[93m⚠️  Warning: {message}\033[0m")
+
+    # Process hex addresses (ECDSA)
+    if balance_config.hex:
+        normalized_hex = balance_config.normalize_hex_addresses()
+        
+        for address, balance_amount in normalized_hex.items():
+            if not balance_config.validate_hex_address(address):
+                print_warning(f"Invalid hex address format: {address}. Skipping.")
+                continue
+            
+            # Check if address is compatible with account type
+            if config.account_key_type.name != "ECDSA":
+                print_warning(f"Hex address {address} provided but account type is {config.account_key_type.name}. Address may not be compatible.")
+            
+            # Convert hex to lowercase for consistency
+            final_address = address.lower()
+            final_balance = balance_amount * unit
+            
+            # Add to balances
+            entry = [final_address, final_balance]
+            balances.append(entry)
+            print(f"✅ Added balance for hex address {final_address}: {balance_amount} tokens")
+
+    # Process SS58 addresses (SR25519)
+    if balance_config.ss58:
+        for address, balance_amount in balance_config.ss58.items():
+            if not balance_config.validate_ss58_address(address):
+                print_warning(f"Invalid SS58 address format: {address}. Skipping.")
+                continue
+            
+            # Check if address is compatible with account type
+            if config.account_key_type.name != "SR25519":
+                print_warning(f"SS58 address {address} provided but account type is {config.account_key_type.name}. Address may not be compatible.")
+            
+            final_balance = balance_amount * unit
+            
+            # Add to balances - SS58 addresses can be used directly
+            entry = [address, final_balance]
+            balances.append(entry)
+            print(f"✅ Added balance for SS58 address {address}: {balance_amount} tokens")
+
+    # Update the balances in the data
+    data["genesis"]["runtimeGenesis"]["patch"]["balances"]["balances"] = balances
