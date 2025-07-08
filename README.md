@@ -19,6 +19,7 @@ PySubnet is a **beginner-friendly tool** that automates the complex process of s
 - 📁 **Creates proper directory structure** for your network nodes
 - ⚙️ **Prepares a chainspec** with bootnodes and validator keys 
 - 🔗 **Sets up p2p keys** (libp2p keys for bootnodes list)
+- 💸 **Funds** starting balances for any number of accounts for you without having to manually edit chainspec files. (See example in [nodes.toml](./config-examples/nodes.toml))
 - 🏃‍♂️ **Launches your network** with a single command (`-r`)
 - 🎨 **Interactive CLI** with beautiful, colorful output (`-i`)
 
