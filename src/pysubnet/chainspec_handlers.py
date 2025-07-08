@@ -7,9 +7,14 @@ Then include your handler in the main script before `start_network()` is called
 """
 
 import json
+from rich.console import Console
+from rich.prompt import IntPrompt
+from rich.panel import Panel
 
 from .accounts import AccountKeyType
 from .cli import CliConfig
+
+console = Console()
 
 
 def load_chainspec(chainspec: str):
@@ -108,6 +113,50 @@ def inject_validator_balances(
     """
     balances = data["genesis"]["runtimeGenesis"]["patch"]["balances"]["balances"]
 
+    # Check if any nodes have custom balances defined
+    has_node_balances = includeNodeBalances and any(node.get("balance") is not None for node in NODES)
+    
+    # If tokenDecimals is None and we're setting balances (either default or from nodes), prompt for input
+    if tokenDecimals is None and (amount > 0 or has_node_balances):
+        console.print()
+        console.print(Panel.fit(
+            "[bold blue]🔢 Token Decimals Required for Balance Injection[/bold blue]\n\n"
+            "You're setting validator balances but token decimals are not specified.\n"
+            "Token decimals determine the precision of your token (e.g., 18 for ETH-like tokens).\n\n"
+            "[yellow]Common values:[/yellow]\n"
+            "  • [green]18 decimals[/green]: Standard for most tokens (like ETH, DOT)\n"
+            "  • [green]12 decimals[/green]: Polkadot/Kusama style\n"
+            "  • [green]6 decimals[/green]: USDC/USDT style\n"
+            "  • [green]0 decimals[/green]: Whole numbers only",
+            title="[bold]Balance Configuration[/bold]",
+            border_style="blue"
+        ))
+        
+        try:
+            tokenDecimals = IntPrompt.ask(
+                "\n[bold]Enter token decimals[/bold]",
+                default=18,
+                show_default=True,
+                show_choices=False,
+                console=console
+            )
+            
+            if 0 <= tokenDecimals <= 30:
+                console.print(f"✅ [green]Using {tokenDecimals} token decimals[/green]")
+                # Update the chainspec properties
+                data["properties"]["tokenDecimals"] = tokenDecimals
+            else:
+                console.print("❌ [red]Token decimals must be between 0 and 30. Using default 18.[/red]")
+                tokenDecimals = 18
+                data["properties"]["tokenDecimals"] = tokenDecimals
+        except KeyboardInterrupt:
+            console.print("\n❌ [red]Operation cancelled by user[/red]")
+            return
+        console.print()
+    elif tokenDecimals is None:
+        # Fallback to 18 decimals if no balances are being set
+        tokenDecimals = 18
+    
     unit = 10**tokenDecimals
     vkey = account_key_type.get_vkey()
 
@@ -121,13 +170,16 @@ def inject_validator_balances(
             # Check if node has a balance defined
             if node.get("balance") is not None:
                 current_amount = node["balance"]
-        final_balance = current_amount * unit
-        entry = [
-            node[vkey],
-            final_balance,
-        ]
-        balances.append(entry)
-        print(f"✅ {node[vkey]} --> {current_amount} tokens ({final_balance:,} units)")
+        
+        # Only inject balance if amount > 0
+        if current_amount > 0:
+            final_balance = current_amount * unit
+            entry = [
+                node[vkey],
+                final_balance,
+            ]
+            balances.append(entry)
+            print(f"✅ {node[vkey]} --> {current_amount} tokens ({final_balance:,} units)")
     data["genesis"]["runtimeGenesis"]["patch"]["balances"]["balances"] = balances
 
 
@@ -247,8 +299,8 @@ def apply_config_customizations(data, config: CliConfig):
     network = config.network
     if network is not None:
         # config file customizations are selected thus we use them
-        tokenDecimals = network.token_decimal or fetched_tokenSymbol
-        tokenSymbol = network.token_symbol or fetched_tokenDecimals
+        tokenDecimals = network.token_decimal or fetched_tokenDecimals
+        tokenSymbol = network.token_symbol or fetched_tokenSymbol
         data["properties"]["tokenDecimals"] = (
             tokenDecimals or 18
         )  # Neither defined in chainspec or config -- unlikely but we cover it
@@ -517,8 +569,55 @@ def inject_config_balances(data, config: CliConfig):
         return
 
     balance_config = config.network.balances
+    
+    # Check if there are any balances to inject
+    has_balances = (balance_config.hex and len(balance_config.hex) > 0) or \
+                   (balance_config.ss58 and len(balance_config.ss58) > 0)
+    
+    if not has_balances:
+        return
+
     balances = data["genesis"]["runtimeGenesis"]["patch"]["balances"]["balances"]
-    tokenDecimals = data["properties"].get("tokenDecimals", 18)
+    tokenDecimals = data["properties"].get("tokenDecimals", None)
+    
+    # If tokenDecimals is None and user is injecting balances, prompt for input
+    if tokenDecimals is None:
+        console.print()
+        console.print(Panel.fit(
+            "[bold blue]🔢 Token Decimals Required for Balance Injection[/bold blue]\n\n"
+            "You're injecting custom balances but token decimals are not specified.\n"
+            "Token decimals determine the precision of your token (e.g., 18 for ETH-like tokens).\n\n"
+            "[yellow]Common values:[/yellow]\n"
+            "  • [green]18 decimals[/green]: Standard for most tokens (like ETH, DOT)\n"
+            "  • [green]12 decimals[/green]: Polkadot/Kusama style\n"
+            "  • [green]6 decimals[/green]: USDC/USDT style\n"
+            "  • [green]0 decimals[/green]: Whole numbers only",
+            title="[bold]Custom Balance Configuration[/bold]",
+            border_style="blue"
+        ))
+        
+        try:
+            tokenDecimals = IntPrompt.ask(
+                "\n[bold]Enter token decimals[/bold]",
+                default=18,
+                show_default=True,
+                show_choices=False,
+                console=console
+            )
+            
+            if 0 <= tokenDecimals <= 30:
+                console.print(f"✅ [green]Using {tokenDecimals} token decimals[/green]")
+                # Update the chainspec properties
+                data["properties"]["tokenDecimals"] = tokenDecimals
+            else:
+                console.print("❌ [red]Token decimals must be between 0 and 30. Using default 18.[/red]")
+                tokenDecimals = 18
+                data["properties"]["tokenDecimals"] = tokenDecimals
+        except KeyboardInterrupt:
+            console.print("\n❌ [red]Operation cancelled by user[/red]")
+            return
+        console.print()
+        
     unit = 10 ** tokenDecimals
 
     # Print colored warnings
