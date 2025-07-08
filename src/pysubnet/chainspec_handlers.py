@@ -116,15 +116,18 @@ def inject_validator_balances(
         balances = []
     # Add initial balances for each node
     for node in NODES:
+        current_amount = amount
         if includeNodeBalances:
             # Check if node has a balance defined
             if node.get("balance") is not None:
-                amount = node["balance"]
+                current_amount = node["balance"]
+        final_balance = current_amount * unit
         entry = [
             node[vkey],
-            amount * unit,
+            final_balance,
         ]
         balances.append(entry)
+        print(f"✅ {node[vkey]} --> {current_amount} tokens ({final_balance:,} units)")
     data["genesis"]["runtimeGenesis"]["patch"]["balances"]["balances"] = balances
 
 
@@ -532,8 +535,8 @@ def inject_config_balances(data, config: CliConfig):
                 continue
             
             # Check if address is compatible with account type
-            if config.account_key_type.name != "ECDSA":
-                print_warning(f"Hex address {address} provided but account type is {config.account_key_type.name}. Address may not be compatible.")
+            if config.account_key_type != AccountKeyType.AccountId20:
+                print_warning(f"Hex address {address} provided but account type is {config.account_key_type.value}. Address may not be compatible.")
             
             # Convert hex to lowercase for consistency
             final_address = address.lower()
@@ -542,7 +545,7 @@ def inject_config_balances(data, config: CliConfig):
             # Add to balances
             entry = [final_address, final_balance]
             balances.append(entry)
-            print(f"✅ Added balance for hex address {final_address}: {balance_amount} tokens")
+            print(f"✅ {final_address} --> {balance_amount} tokens ({final_balance:,} units)")
 
     # Process SS58 addresses (SR25519)
     if balance_config.ss58:
@@ -552,15 +555,15 @@ def inject_config_balances(data, config: CliConfig):
                 continue
             
             # Check if address is compatible with account type
-            if config.account_key_type.name != "SR25519":
-                print_warning(f"SS58 address {address} provided but account type is {config.account_key_type.name}. Address may not be compatible.")
+            if config.account_key_type != AccountKeyType.AccountId32:
+                print_warning(f"SS58 address {address} provided but account type is {config.account_key_type.value}. Address may not be compatible.")
             
             final_balance = balance_amount * unit
             
             # Add to balances - SS58 addresses can be used directly
             entry = [address, final_balance]
             balances.append(entry)
-            print(f"✅ Added balance for SS58 address {address}: {balance_amount} tokens")
+            print(f"✅ {address} --> {balance_amount} tokens ({final_balance:,} units)")
 
     # Update the balances in the data
     data["genesis"]["runtimeGenesis"]["patch"]["balances"]["balances"] = balances
