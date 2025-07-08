@@ -138,17 +138,20 @@ def inject_validator_balances(
                 default=18,
                 show_default=True,
                 show_choices=False,
-                console=console
+                console=console,
+                choices=None  # Allow any integer input for validation below
             )
             
-            if 0 <= tokenDecimals <= 30:
-                console.print(f"✅ [green]Using {tokenDecimals} token decimals[/green]")
-                # Update the chainspec properties
-                data["properties"]["tokenDecimals"] = tokenDecimals
-            else:
+            # Ensure we have a valid integer and it's in range
+            if tokenDecimals is None:
+                tokenDecimals = 18
+            elif not (0 <= tokenDecimals <= 30):
                 console.print("❌ [red]Token decimals must be between 0 and 30. Using default 18.[/red]")
                 tokenDecimals = 18
-                data["properties"]["tokenDecimals"] = tokenDecimals
+            
+            console.print(f"✅ [green]Using {tokenDecimals} token decimals[/green]")
+            # Update the chainspec properties
+            data["properties"]["tokenDecimals"] = tokenDecimals
         except KeyboardInterrupt:
             console.print("\n❌ [red]Operation cancelled by user[/red]")
             return
@@ -602,17 +605,20 @@ def inject_config_balances(data, config: CliConfig):
                 default=18,
                 show_default=True,
                 show_choices=False,
-                console=console
+                console=console,
+                choices=None  # Allow any integer input for validation below
             )
             
-            if 0 <= tokenDecimals <= 30:
-                console.print(f"✅ [green]Using {tokenDecimals} token decimals[/green]")
-                # Update the chainspec properties
-                data["properties"]["tokenDecimals"] = tokenDecimals
-            else:
+            # Ensure we have a valid integer and it's in range
+            if tokenDecimals is None:
+                tokenDecimals = 18
+            elif not (0 <= tokenDecimals <= 30):
                 console.print("❌ [red]Token decimals must be between 0 and 30. Using default 18.[/red]")
                 tokenDecimals = 18
-                data["properties"]["tokenDecimals"] = tokenDecimals
+            
+            console.print(f"✅ [green]Using {tokenDecimals} token decimals[/green]")
+            # Update the chainspec properties
+            data["properties"]["tokenDecimals"] = tokenDecimals
         except KeyboardInterrupt:
             console.print("\n❌ [red]Operation cancelled by user[/red]")
             return
